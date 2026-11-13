@@ -174,3 +174,4 @@ if __name__ == "__main__":
     parser.add_argument("--file", default=None, help="Optional local HGT or GeoTIFF path")
     args = parser.parse_args()
     ingest_earth_region(args.region, args.file)
+

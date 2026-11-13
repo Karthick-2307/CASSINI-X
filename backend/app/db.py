@@ -27,6 +27,7 @@ def init_db():
     from app import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
     seed_factual_planets()
+    seed_factual_benchmarks()
 
 
 def seed_factual_planets():
@@ -57,6 +58,82 @@ def seed_factual_planets():
             ]
             db.add_all(factual_planets)
             db.commit()
+    finally:
+        db.close()
+
+
+def seed_factual_benchmarks():
+    from app.models import BenchmarkSite, Planet
+    db = SessionLocal()
+    try:
+        if db.query(BenchmarkSite).count() == 0:
+            mars = db.query(Planet).filter(Planet.name == "Mars").first()
+            moon = db.query(Planet).filter(Planet.name == "Moon").first()
+            if mars and moon:
+                benchmarks = [
+                    BenchmarkSite(
+                        name="Devon Island (Haughton Crater)",
+                        target_region_name="Jezero Crater Floor & Delta",
+                        earth_analog_name="Devon Island, Nunavut, Canada",
+                        planet_id=mars.id,
+                        lat=75.38,
+                        lon=-89.67,
+                        known_analog_type="Mars polar desert and impact geology",
+                        description="Haughton impact structure set in a cold, hyper-arid polar desert environment."
+                    ),
+                    BenchmarkSite(
+                        name="Atacama Desert (Yungay)",
+                        target_region_name="Jezero Crater Floor & Delta",
+                        earth_analog_name="Atacama Desert, Chile",
+                        planet_id=mars.id,
+                        lat=-24.08,
+                        lon=-69.95,
+                        known_analog_type="Hyper-arid Mars soil and dry environment",
+                        description="Extreme arid terrestrial environment with low organic matter resembling Martian soils."
+                    ),
+                    BenchmarkSite(
+                        name="Lanzarote Volcanic Field (Canaries)",
+                        target_region_name="Mare Tranquillitatis (Apollo 11 Basin)",
+                        earth_analog_name="Lanzarote Volcanic Field",
+                        planet_id=moon.id,
+                        lat=29.03,
+                        lon=-13.63,
+                        known_analog_type="Lunar and Martian basaltic lava tubes and volcanic terrain",
+                        description="Basaltic lava flows, volcanic cones, and lava tubes analogous to lunar and martian volcanic features."
+                    ),
+                    BenchmarkSite(
+                        name="Mauna Kea & Mauna Loa",
+                        target_region_name="Mare Tranquillitatis (Apollo 11 Basin)",
+                        earth_analog_name="Mauna Kea, Hawaii, USA",
+                        planet_id=moon.id,
+                        lat=19.82,
+                        lon=-155.47,
+                        known_analog_type="Lunar regolith and basaltic shield terrain",
+                        description="Hawaiian basaltic tephra and weathered volcanic materials used as standard lunar simulant sources."
+                    ),
+                    BenchmarkSite(
+                        name="Svalbard Archipelago",
+                        target_region_name="Jezero Crater Floor & Delta",
+                        earth_analog_name="Svalbard, Norway",
+                        planet_id=mars.id,
+                        lat=78.22,
+                        lon=15.65,
+                        known_analog_type="Mars permafrost, hydrothermal, and arctic terrain",
+                        description="Arctic polygonal patterned ground, pingos, and permafrost features analogous to Martian mid-latitude terrain."
+                    ),
+                    BenchmarkSite(
+                        name="McMurdo Dry Valleys",
+                        target_region_name="Jezero Crater Floor & Delta",
+                        earth_analog_name="McMurdo Dry Valleys, Antarctica",
+                        planet_id=mars.id,
+                        lat=-77.50,
+                        lon=162.50,
+                        known_analog_type="Mars cold-arid permafrost and Antarctic desert",
+                        description="Cold desert environment with extreme dryness, patterned ground, and subsurface ice."
+                    ),
+                ]
+                db.add_all(benchmarks)
+                db.commit()
     finally:
         db.close()
 

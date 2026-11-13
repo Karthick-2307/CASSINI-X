@@ -153,3 +153,4 @@ def extract_grid_features(
     }
 
     return cells, summary
+

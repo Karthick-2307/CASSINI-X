@@ -76,3 +76,4 @@ If network access to USGS or AWS servers is unavailable or blocked:
    python -m app.ingest.moon_lola --region tranquillitatis --file "path/to/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif"
    ```
 3. Processed 500m rasters and extracted terrain features will automatically populate `backend/data/processed/` and the SQLite database.
+

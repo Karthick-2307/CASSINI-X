@@ -91,12 +91,20 @@ class Analysis(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     target_region_id = Column(Integer, ForeignKey("regions.id"), nullable=False, index=True)
+    features_json = Column(Text, nullable=True)
     weights_json = Column(Text, nullable=False)
-    status = Column(String(20), default="pending")
+    threshold = Column(Float, nullable=True, default=0.0)
+    top_k = Column(Integer, nullable=True, default=20)
+    scaler_params_json = Column(Text, nullable=True)
+    target_summary_json = Column(Text, nullable=True)
+    clustering_info_json = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")  # pending, running, completed, failed
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = Column(DateTime, nullable=True)
 
     target_region = relationship("Region")
-    candidate_matches = relationship("CandidateMatch", back_populates="analysis")
+    candidate_matches = relationship("CandidateMatch", back_populates="analysis", cascade="all, delete-orphan")
 
 
 class CandidateMatch(Base):
@@ -105,14 +113,32 @@ class CandidateMatch(Base):
     id = Column(Integer, primary_key=True, index=True)
     analysis_id = Column(Integer, ForeignKey("analyses.id"), nullable=False, index=True)
     earth_region_id = Column(Integer, ForeignKey("regions.id"), nullable=False, index=True)
-    similarity_score = Column(Float, nullable=False)
-    confidence_score = Column(Float, nullable=False)
-    mission_suitability_score = Column(Float, nullable=False)
-    score_breakdown_json = Column(Text, nullable=False)
+    terrain_feature_id = Column(Integer, ForeignKey("terrain_features.id"), nullable=True)
+    target_region_id = Column(Integer, ForeignKey("regions.id"), nullable=True)
+    location_name = Column(String(100), nullable=True)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+
+    # Metric scores - strictly separated
+    similarity_score = Column(Float, nullable=False)  # 0-100
+    confidence_score = Column(Float, nullable=False)  # 0-100
+    confidence_components_json = Column(Text, nullable=True)
+    mission_suitability_score = Column(Float, nullable=True)  # Strictly null until Part 7
+
+    data_coverage = Column(Float, nullable=True)
+    cluster_id = Column(Integer, nullable=True)
+    is_anomaly = Column(Boolean, default=False)
+
+    feature_comparison_json = Column(Text, nullable=True)
+    dataset_references_json = Column(Text, nullable=True)
+    explanation_json = Column(Text, nullable=True)
+    score_breakdown_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     analysis = relationship("Analysis", back_populates="candidate_matches")
-    earth_region = relationship("Region")
+    earth_region = relationship("Region", foreign_keys=[earth_region_id])
+    target_region = relationship("Region", foreign_keys=[target_region_id])
+    terrain_feature = relationship("TerrainFeature")
 
 
 class BenchmarkSite(Base):
@@ -127,6 +153,18 @@ class BenchmarkSite(Base):
     lon = Column(Float, nullable=False)
     known_analog_type = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
+
+    planet = relationship("Planet")
+
+
+class ValidationResult(Base):
+    __tablename__ = "validation_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    metrics_json = Column(Text, nullable=False)
+    benchmark_results_json = Column(Text, nullable=False)
+    notes = Column(Text, nullable=True)
 
 
 class MissionProfile(Base):

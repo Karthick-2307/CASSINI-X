@@ -144,3 +144,4 @@ if __name__ == "__main__":
     parser.add_argument("--file", default=None, help="Optional local GeoTIFF path")
     args = parser.parse_args()
     ingest_moon_region(args.region, args.file)
+

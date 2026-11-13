@@ -115,8 +115,151 @@ def test_dashboard_summary_with_real_data(client):
 
 
 def test_unimplemented_endpoint_returns_501(client):
-    response = client.get("/api/analyses/submit")
+    response = client.get("/api/reports/download/999")
     assert response.status_code == 501
     data = response.json()
     assert "error" in data
     assert data["error"]["code"] == "HTTP_501"
+
+
+# --- Part 5: Analysis and Similarity API Tests ---
+
+def test_analysis_run_and_detail_schema(client):
+    """
+    Test running real similarity analysis on Mars (Jezero Crater Floor & Delta, id=2)
+    against the Earth candidate pool (Lanzarote Volcanic Field).
+    Verifies all Part 5 Section 5.3 output fields.
+    """
+    run_payload = {
+        "target_region_id": 2,
+        "features": ["elevation_relative", "slope_deg", "roughness_m"],
+        "threshold": 0.0,
+        "top_k": 5
+    }
+
+    run_res = client.post("/api/analysis/run", json=run_payload)
+    assert run_res.status_code == 200, run_res.text
+    run_data = run_res.json()
+    assert "analysis_id" in run_data
+    assert run_data["status"] == "completed"
+
+    analysis_id = run_data["analysis_id"]
+
+    # Retrieve analysis detail
+    detail_res = client.get(f"/api/analysis/{analysis_id}")
+    assert detail_res.status_code == 200
+    detail = detail_res.json()
+
+    assert detail["id"] == analysis_id
+    assert detail["target_region_id"] == 2
+    assert "Jezero" in detail["target_region_name"]
+    assert detail["planet"] == "Mars"
+    assert detail["status"] == "completed"
+    assert detail["candidate_count"] > 0
+    assert "scaler_params" in detail and detail["scaler_params"] is not None
+    assert "target_summary" in detail and detail["target_summary"] is not None
+    assert "clustering_info" in detail and detail["clustering_info"] is not None
+
+    # Check candidates structure (strictly enforcing Section 5.3)
+    for cand in detail["candidates"]:
+        assert "location_name" in cand
+        assert "lat" in cand and cand["lat"] is not None
+        assert "lon" in cand and cand["lon"] is not None
+        assert cand["target_region_id"] == 2
+
+        # 1. Similarity (0-100)
+        assert 0.0 <= cand["similarity"] <= 100.0
+
+        # 2. Confidence (0-100) and components
+        assert 0.0 <= cand["confidence"] <= 100.0
+        assert cand["confidence_components"] is not None
+        assert "coverage_score" in cand["confidence_components"]
+        assert "resolution_score" in cand["confidence_components"]
+
+        # 3. Mission suitability strictly null until Part 7
+        assert cand["mission_suitability"] is None
+
+        # 4. Feature comparison
+        assert len(cand["feature_comparison"]) == 3
+        for item in cand["feature_comparison"]:
+            assert "feature" in item
+            assert "unit" in item
+            assert "target_value" in item
+            assert "candidate_value" in item
+            assert "difference" in item
+            assert "contribution" in item
+            assert item["kind"] in ("matching", "higher", "lower")
+
+        # 5. Clustering and anomaly
+        assert cand["cluster_id"] is not None
+        assert isinstance(cand["is_anomaly"], bool)
+
+        # 6. Dataset references
+        assert isinstance(cand["dataset_references"], list)
+
+        # 7. Explanation
+        assert "explanation" in cand
+        assert "similarities" in cand["explanation"]
+        assert "differences" in cand["explanation"]
+
+
+def test_analogs_list_and_detail(client):
+    """
+    Test listing candidate matches with filters and fetching candidate by id.
+    """
+    analogs_res = client.get("/api/analogs?planet=Mars&limit=10")
+    assert analogs_res.status_code == 200
+    analogs = analogs_res.json()
+    assert len(analogs) > 0
+
+    first_analog = analogs[0]
+    analog_id = first_analog["id"]
+    assert first_analog["mission_suitability"] is None
+
+    # Test single analog detail endpoint
+    single_res = client.get(f"/api/analogs/{analog_id}")
+    assert single_res.status_code == 200
+    single = single_res.json()
+    assert single["id"] == analog_id
+    assert single["similarity"] == first_analog["similarity"]
+    assert single["mission_suitability"] is None
+
+
+def test_analysis_input_validations(client):
+    """
+    Test clean 404 and 422 validations on invalid inputs.
+    """
+    # Non-existent target region -> 404
+    res_404 = client.post("/api/analysis/run", json={"target_region_id": 99999})
+    assert res_404.status_code == 404
+
+    # Invalid top_k <= 0 -> 422
+    res_topk = client.post("/api/analysis/run", json={"target_region_id": 2, "top_k": 0})
+    assert res_topk.status_code == 422
+
+    # Invalid threshold > 100 -> 422
+    res_thresh = client.post("/api/analysis/run", json={"target_region_id": 2, "threshold": 150.0})
+    assert res_thresh.status_code == 422
+
+    # Unsupported feature name -> 422
+    res_feat = client.post(
+        "/api/analysis/run",
+        json={"target_region_id": 2, "features": ["invented_feature_xyz"]}
+    )
+    assert res_feat.status_code == 422
+
+
+def test_benchmark_validation_endpoint(client):
+    """
+    Test benchmark validation pipeline endpoint.
+    """
+    val_res = client.post("/api/benchmarks/validation")
+    assert val_res.status_code == 200
+    val_data = val_res.json()
+
+    assert "model_name" in val_data
+    assert "metrics_summary" in val_data
+    assert "statistical_power_note" in val_data
+    assert isinstance(val_data["benchmark_evaluations"], list)
+    assert "model" in val_data["metrics_summary"]
+    assert "baseline_slope" in val_data["metrics_summary"]
