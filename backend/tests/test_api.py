@@ -490,6 +490,13 @@ def test_scientific_assistant_endpoint(client):
     assert res_unknown.status_code == 200
     assert "Scientific Assistant" in res_unknown.json()["answer"]
 
+    # 5. Appendix B route alias: /api/assistant/ask
+    res_ask = client.post("/api/assistant/ask", json={
+        "query": "summarise the top candidates"
+    })
+    assert res_ask.status_code == 200
+    assert "Top Analog Candidates" in res_ask.json()["answer"]
+
 
 # --- Part 8.1: Comprehensive Error Handling (404, 422, Unavailable Data) ---
 

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-13T08:13:18.403173+00:00",
+  "timestamp": "2026-11-13T10:12:46.983342+00:00",
   "model_name": "Weighted Euclidean Similarity (Robust Scaling)",
   "features": [
     "elevation_relative",

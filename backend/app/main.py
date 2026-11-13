@@ -963,6 +963,7 @@ def download_report(report_id: int, db: Session = Depends(get_db)):
 # --- Part 7D: Scientific Assistant Endpoints ---
 
 @app.post("/api/assistant/query", response_model=AssistantQueryResponse, tags=["Scientific Assistant"])
+@app.post("/api/assistant/ask", response_model=AssistantQueryResponse, tags=["Scientific Assistant"])
 def ask_assistant(req: AssistantQueryRequest, db: Session = Depends(get_db)):
     result = process_assistant_query(
         db=db,
