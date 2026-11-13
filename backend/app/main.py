@@ -118,3 +118,4 @@ def planned_endpoints(path: str):
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail=f"Endpoint '/api/{path}' is not implemented yet. Scheduled for upcoming phases (Parts 4-7)."
     )
+

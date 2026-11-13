@@ -1,21 +1,23 @@
 import React from "react";
+import { SectionHeading, Badge, EmptyState } from "../components/ui";
 
 export const Explorer: React.FC = () => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3">
-        <h1 className="text-2xl font-bold text-white">Planetary Explorer</h1>
-        <span className="text-xs bg-amber-950/60 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono">
-          Phase 6 Planned
-        </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+        <SectionHeading
+          kicker="Terrain Intelligence"
+          title="Planetary Explorer"
+          subtitle="Topographic cross-sections, elevation distributions, and slope inclination profiles."
+        />
+        <Badge variant="planned">Phase 6 Planned</Badge>
       </div>
-      <p className="text-gray-400 text-sm max-w-2xl">
-        Explore elevation, slope, and roughness profiles across target regions on the Moon and Mars with cross-sectional profiles.
-      </p>
-      <div className="p-6 bg-gray-900 border border-gray-800 rounded-lg text-sm text-gray-400 space-y-2">
-        <p className="font-semibold text-gray-300">Feature Status:</p>
-        <p>Terrain cross-sections and raster inspection tools are scheduled for Part 6.</p>
-      </div>
+
+      <EmptyState
+        title="Orbital Terrain Profiler"
+        description="Inspect high-resolution DEM cross-sections, slope variance histograms, and surface roughness distributions across target lunar and Martian regions."
+        reason="Scheduled for Part 6."
+      />
     </div>
   );
 };

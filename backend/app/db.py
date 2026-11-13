@@ -59,3 +59,4 @@ def seed_factual_planets():
             db.commit()
     finally:
         db.close()
+

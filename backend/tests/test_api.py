@@ -63,3 +63,4 @@ def test_unimplemented_endpoint_returns_501(client):
     data = response.json()
     assert "error" in data
     assert data["error"]["code"] == "HTTP_501"
+

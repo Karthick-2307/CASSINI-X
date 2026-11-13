@@ -36,6 +36,16 @@ export interface HealthStatus {
   demo_mode: boolean;
 }
 
+export interface AnalogMatch {
+  id: number;
+  target_region_name: string;
+  earth_analog_name: string;
+  similarity_score: number;
+  confidence_score: number;
+  mission_suitability_score: number;
+  target_planet: string;
+}
+
 export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
   try {
@@ -73,4 +83,13 @@ export const api = {
   getHealth: () => apiClient<HealthStatus>("/api/health"),
   getPlanets: () => apiClient<Planet[]>("/api/planets"),
   getDatasets: () => apiClient<Dataset[]>("/api/datasets"),
+  // Safe fetch for featured discoveries: returns [] if endpoint is unimplemented/empty
+  getFeaturedAnalogs: async (limit: number = 3): Promise<AnalogMatch[]> => {
+    try {
+      return await apiClient<AnalogMatch[]>(`/api/analogs?limit=${limit}`);
+    } catch {
+      // Empty by design in Phase 2
+      return [];
+    }
+  },
 };

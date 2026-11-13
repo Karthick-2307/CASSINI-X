@@ -1,21 +1,23 @@
 import React from "react";
+import { SectionHeading, Badge, EmptyState } from "../components/ui";
 
 export const Analysis: React.FC = () => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3">
-        <h1 className="text-2xl font-bold text-white">AI & Similarity Analysis</h1>
-        <span className="text-xs bg-amber-950/60 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono">
-          Phase 5-6 Planned
-        </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+        <SectionHeading
+          kicker="Mathematical Models"
+          title="AI & Similarity Analysis"
+          subtitle="Transparent weighted distance models, multivariate feature clustering, and PCA projections."
+        />
+        <Badge variant="planned">Phase 5-6 Planned</Badge>
       </div>
-      <p className="text-gray-400 text-sm max-w-2xl">
-        Transparent weighted-distance model comparing elevation, slope, and roughness metrics, with explainable score decompositions.
-      </p>
-      <div className="p-6 bg-gray-900 border border-gray-800 rounded-lg text-sm text-gray-400 space-y-2">
-        <p className="font-semibold text-gray-300">Feature Status:</p>
-        <p>Scientific similarity engine, PCA projection, and cluster analysis interfaces will be introduced in Part 5 and Part 6.</p>
-      </div>
+
+      <EmptyState
+        title="Similarity Distance Engine"
+        description="Inspect multi-dimensional feature space alignments comparing elevation, slope, and roughness distributions at standardized spatial scales."
+        reason="Scheduled for Part 5 (ML Engine) and Part 6 (Analysis UI)."
+      />
     </div>
   );
 };

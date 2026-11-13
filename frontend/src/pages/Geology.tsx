@@ -1,21 +1,23 @@
 import React from "react";
+import { SectionHeading, Badge, EmptyState } from "../components/ui";
 
 export const Geology: React.FC = () => {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3">
-        <h1 className="text-2xl font-bold text-white">Geological Context</h1>
-        <span className="text-xs bg-amber-950/60 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono">
-          Phase 7 Planned
-        </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+        <SectionHeading
+          kicker="Planetary Geology"
+          title="Geological Context"
+          subtitle="Lithologic classifications, impact crater mechanics, volcanology, and permafrost analogs."
+        />
+        <Badge variant="planned">Phase 7 Planned</Badge>
       </div>
-      <p className="text-gray-400 text-sm max-w-2xl">
-        Stratigraphic, lithologic, and volcanic/impact process classification contextualizing terrestrial analog matches.
-      </p>
-      <div className="p-6 bg-gray-900 border border-gray-800 rounded-lg text-sm text-gray-400 space-y-2">
-        <p className="font-semibold text-gray-300">Feature Status:</p>
-        <p>Geological classification modules and lithology comparisons will be built in Part 7.</p>
-      </div>
+
+      <EmptyState
+        title="Geological & Lithological Intelligence"
+        description="Connect surface morphometry with comparative planetary geology, basaltic lava tube structures, and hyper-arid weathering analogues."
+        reason="Scheduled for Part 7."
+      />
     </div>
   );
 };

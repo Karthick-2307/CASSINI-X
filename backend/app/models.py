@@ -139,3 +139,4 @@ class Report(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     analysis = relationship("Analysis")
+

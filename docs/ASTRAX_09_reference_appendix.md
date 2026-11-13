@@ -114,3 +114,4 @@
 - **Mauna Kea & Mauna Loa (Hawaii, USA)**: Lunar regolith and Martian basaltic shield volcano terrain.
 - **Svalbard (Norway)**: Mars permafrost, hydrothermal, and arctic terrain analog.
 - **McMurdo Dry Valleys (Antarctica)**: Mars cold-arid permafrost and Antarctic desert analog.
+
