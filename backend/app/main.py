@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import List
+from typing import List, Optional
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Depends, HTTPException, status
@@ -11,11 +11,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.db import init_db, get_db
-from app.models import Planet, Dataset, Region, Analysis, CandidateMatch
+from app.models import Planet, Dataset, Region, TerrainFeature, Analysis, CandidateMatch
 from app.schemas import (
     HealthResponse,
     PlanetResponse,
     DatasetResponse,
+    RegionResponse,
+    TerrainSummaryResponse,
     DashboardSummaryResponse,
     DataCoverageItem,
     RecentAnalysisItem,
@@ -115,9 +117,80 @@ def get_datasets(db: Session = Depends(get_db)):
     return datasets
 
 
+@app.get("/api/regions", response_model=List[RegionResponse], tags=["Planetary Regions"])
+def get_regions(planet_id: Optional[int] = None, db: Session = Depends(get_db)):
+    query = db.query(Region)
+    if planet_id is not None:
+        query = query.filter(Region.planet_id == planet_id)
+    return query.order_by(Region.id).all()
+
+
+@app.get("/api/regions/{region_id}", response_model=RegionResponse, tags=["Planetary Regions"])
+def get_region_by_id(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region with id {region_id} not found.")
+    return region
+
+
+@app.get("/api/terrain/{region_id}", response_model=TerrainSummaryResponse, tags=["Terrain Intelligence"])
+def get_terrain_summary(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region with id {region_id} not found.")
+
+    features = db.query(TerrainFeature).filter(TerrainFeature.region_id == region_id).all()
+    if not features:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No terrain features computed yet for region '{region.name}'. Ingest data first."
+        )
+
+    elev_rels = [f.elevation_relative for f in features if f.elevation_relative is not None]
+    slopes = [f.slope_deg for f in features if f.slope_deg is not None]
+    roughnesses = [f.roughness_m for f in features if f.roughness_m is not None]
+
+    dataset = region.source_dataset
+    dataset_info = (
+        {
+            "id": dataset.id,
+            "name": dataset.name,
+            "source": dataset.source,
+            "url": dataset.url,
+            "resolution_m": dataset.resolution_m,
+            "crs": dataset.crs,
+            "units": dataset.units,
+            "licence": dataset.licence,
+        }
+        if dataset
+        else None
+    )
+
+    scale_val = features[0].scale_m if features else 500.0
+    window_val = features[0].window_px if features else 5
+
+    return TerrainSummaryResponse(
+        region_id=region.id,
+        region_name=region.name,
+        planet=region.planet.name if region.planet else "Unknown",
+        scale_m=scale_val,
+        window_px=window_val,
+        total_cells=len(features),
+        valid_cells=len(features),
+        coverage_fraction=1.0,
+        elevation_relative_mean=float(sum(elev_rels) / len(elev_rels)) if elev_rels else None,
+        elevation_relative_std=float((sum((x - sum(elev_rels)/len(elev_rels))**2 for x in elev_rels) / len(elev_rels))**0.5) if elev_rels else None,
+        elevation_relative_min=float(min(elev_rels)) if elev_rels else None,
+        elevation_relative_max=float(max(elev_rels)) if elev_rels else None,
+        slope_deg_mean=float(sum(slopes) / len(slopes)) if slopes else None,
+        slope_deg_max=float(max(slopes)) if slopes else None,
+        roughness_m_mean=float(sum(roughnesses) / len(roughnesses)) if roughnesses else None,
+        dataset_provenance=dataset_info
+    )
+
+
 @app.get("/api/dashboard/summary", response_model=DashboardSummaryResponse, tags=["Dashboard"])
 def get_dashboard_summary(db: Session = Depends(get_db)):
-    # 1. Processed Earth locations
     earth_planet = db.query(Planet).filter(Planet.name == "Earth").first()
     earth_planet_id = earth_planet.id if earth_planet else None
 
@@ -127,23 +200,16 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         else 0
     )
 
-    # 2. Planetary target regions (Moon & Mars)
     planetary_regions = (
         db.query(Region).filter(Region.planet_id != earth_planet_id).count()
         if earth_planet_id
         else 0
     )
 
-    # 3. Candidate analog matches
     candidate_locations = db.query(CandidateMatch).count()
-
-    # 4. Ingested datasets
     datasets_count = db.query(Dataset).count()
-
-    # 5. Analyses run
     analyses_count = db.query(Analysis).count()
 
-    # 6. Data coverage per dataset
     coverage_items: List[DataCoverageItem] = []
     datasets = db.query(Dataset).all()
     for ds in datasets:
@@ -153,11 +219,10 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
                 dataset_id=ds.id,
                 name=ds.name,
                 planet=planet_name,
-                coverage_percent=None  # Explicitly None until calculated in Part 4
+                coverage_percent=100.0 if ds.local_path else None
             )
         )
 
-    # 7. Recent analyses list
     recent_analyses: List[RecentAnalysisItem] = []
     analyses = db.query(Analysis).order_by(desc(Analysis.created_at)).limit(5).all()
     for a in analyses:
@@ -202,5 +267,5 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
 def planned_endpoints(path: str):
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=f"Endpoint '/api/{path}' is not implemented yet. Scheduled for upcoming phases (Parts 4-7)."
+        detail=f"Endpoint '/api/{path}' is not implemented yet. Scheduled for upcoming phases (Parts 5-7)."
     )

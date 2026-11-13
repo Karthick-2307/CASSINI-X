@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db import Base
 
@@ -26,10 +26,13 @@ class Dataset(Base):
     source = Column(String(100), nullable=False)
     url = Column(String(255), nullable=True)
     resolution_m = Column(Float, nullable=True)
+    crs = Column(String(100), nullable=True)
     units = Column(String(50), nullable=True)
     acquisition_date = Column(String(50), nullable=True)
     processing_steps = Column(Text, nullable=True)
     licence = Column(String(100), nullable=True)
+    local_path = Column(String(255), nullable=True)
+    status = Column(String(50), default="active")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     planet = relationship("Planet", back_populates="datasets")
@@ -44,12 +47,16 @@ class Region(Base):
     name = Column(String(100), nullable=False, index=True)
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
+    bbox_json = Column(Text, nullable=True)  # [min_lon, min_lat, max_lon, max_lat]
     geometry_geojson = Column(Text, nullable=True)
     elevation_m = Column(Float, nullable=True)
     slope_deg = Column(Float, nullable=True)
     roughness_m = Column(Float, nullable=True)
     source_dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=True)
     description = Column(Text, nullable=True)
+    is_curated = Column(Boolean, default=False)
+    citation = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     planet = relationship("Planet", back_populates="regions")
@@ -62,15 +69,18 @@ class TerrainFeature(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     region_id = Column(Integer, ForeignKey("regions.id"), nullable=False, index=True)
-    scale_m = Column(Float, nullable=False)
-    elevation_min = Column(Float, nullable=True)
-    elevation_max = Column(Float, nullable=True)
-    elevation_mean = Column(Float, nullable=True)
-    elevation_std = Column(Float, nullable=True)
-    slope_mean = Column(Float, nullable=True)
-    slope_max = Column(Float, nullable=True)
-    roughness_mean = Column(Float, nullable=True)
-    nodata_fraction = Column(Float, default=0.0)
+    scale_m = Column(Float, nullable=False, default=500.0)
+    window_px = Column(Integer, nullable=False, default=5)
+    cell_index = Column(Integer, nullable=True)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    elevation_relative = Column(Float, nullable=True)
+    slope_deg = Column(Float, nullable=True)
+    roughness_m = Column(Float, nullable=True)
+    valid_fraction = Column(Float, nullable=False, default=1.0)
+    native_res_m = Column(Float, nullable=True)
+    kind = Column(String(50), default="derived")
+    processing_params_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     region = relationship("Region", back_populates="terrain_features")
@@ -95,7 +105,6 @@ class CandidateMatch(Base):
     id = Column(Integer, primary_key=True, index=True)
     analysis_id = Column(Integer, ForeignKey("analyses.id"), nullable=False, index=True)
     earth_region_id = Column(Integer, ForeignKey("regions.id"), nullable=False, index=True)
-    # Similarity, confidence and mission suitability are 3 separate fields
     similarity_score = Column(Float, nullable=False)
     confidence_score = Column(Float, nullable=False)
     mission_suitability_score = Column(Float, nullable=False)
@@ -139,4 +148,3 @@ class Report(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     analysis = relationship("Analysis")
-

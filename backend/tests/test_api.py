@@ -48,32 +48,74 @@ def test_planets_endpoint(client):
     assert planet_names["Mars"]["gravity_ms2"] == 3.71
 
 
-def test_datasets_empty_by_default(client):
+def test_datasets_catalog(client):
     response = client.get("/api/datasets")
     assert response.status_code == 200
     datasets = response.json()
     assert isinstance(datasets, list)
-    assert len(datasets) == 0
+    assert len(datasets) >= 3
+
+    dataset_names = [d["name"] for d in datasets]
+    assert any("SRTM" in name for name in dataset_names)
+    assert any("MOLA" in name for name in dataset_names)
+    assert any("LOLA" in name for name in dataset_names)
 
 
-def test_dashboard_summary_empty_database(client):
+def test_regions_endpoints(client):
+    response = client.get("/api/regions")
+    assert response.status_code == 200
+    regions = response.json()
+    assert len(regions) >= 3
+
+    first_region = regions[0]
+    region_id = first_region["id"]
+
+    # Verify single region endpoint
+    single_res = client.get(f"/api/regions/{region_id}")
+    assert single_res.status_code == 200
+    single_data = single_res.json()
+    assert single_data["name"] == first_region["name"]
+    assert "lat" in single_data
+    assert "lon" in single_data
+    assert single_data["is_curated"] is True
+
+
+def test_terrain_summary_endpoint(client):
+    regions_res = client.get("/api/regions")
+    regions = regions_res.json()
+    assert len(regions) > 0
+
+    first_id = regions[0]["id"]
+    terrain_res = client.get(f"/api/terrain/{first_id}")
+    assert terrain_res.status_code == 200
+    data = terrain_res.json()
+
+    assert data["region_id"] == first_id
+    assert data["scale_m"] == 500.0
+    assert data["window_px"] == 5
+    assert data["valid_cells"] > 0
+    assert data["coverage_fraction"] > 0.0
+    assert data["slope_deg_mean"] is not None
+    assert data["roughness_m_mean"] is not None
+    assert data["dataset_provenance"] is not None
+    assert "source" in data["dataset_provenance"]
+
+
+def test_dashboard_summary_with_real_data(client):
     response = client.get("/api/dashboard/summary")
     assert response.status_code == 200
     data = response.json()
 
-    # On fresh database, all counts must be strictly 0 without invented numbers
-    assert data["processed_locations"] == 0
-    assert data["planetary_regions"] == 0
-    assert data["candidate_locations"] == 0
-    assert data["datasets_ingested"] == 0
-    assert data["analyses_run"] == 0
-    assert data["data_coverage"] == []
-    assert data["recent_analyses"] == []
+    # Verify real data counts
+    assert data["processed_locations"] >= 1
+    assert data["planetary_regions"] >= 2
+    assert data["datasets_ingested"] >= 3
+    assert len(data["data_coverage"]) >= 3
     assert isinstance(data["demo_mode"], bool)
 
 
 def test_unimplemented_endpoint_returns_501(client):
-    response = client.get("/api/regions")
+    response = client.get("/api/analyses/submit")
     assert response.status_code == 501
     data = response.json()
     assert "error" in data

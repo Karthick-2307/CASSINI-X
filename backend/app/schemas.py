@@ -1,5 +1,4 @@
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict
 
 
@@ -28,10 +27,67 @@ class DatasetResponse(BaseModel):
     source: str
     url: Optional[str] = None
     resolution_m: Optional[float] = None
+    crs: Optional[str] = None
     units: Optional[str] = None
     acquisition_date: Optional[str] = None
     processing_steps: Optional[str] = None
     licence: Optional[str] = None
+    local_path: Optional[str] = None
+    status: Optional[str] = None
+
+
+class RegionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    planet_id: int
+    name: str
+    lat: float
+    lon: float
+    bbox_json: Optional[str] = None
+    geometry_geojson: Optional[str] = None
+    elevation_m: Optional[float] = None
+    slope_deg: Optional[float] = None
+    roughness_m: Optional[float] = None
+    source_dataset_id: Optional[int] = None
+    description: Optional[str] = None
+    is_curated: bool = False
+    citation: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class TerrainFeatureCell(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    cell_index: Optional[int] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    elevation_relative: Optional[float] = None
+    slope_deg: Optional[float] = None
+    roughness_m: Optional[float] = None
+    valid_fraction: float
+    native_res_m: Optional[float] = None
+    kind: str = "derived"
+
+
+class TerrainSummaryResponse(BaseModel):
+    region_id: int
+    region_name: str
+    planet: str
+    scale_m: float
+    window_px: int
+    total_cells: int
+    valid_cells: int
+    coverage_fraction: float
+    elevation_relative_mean: Optional[float] = None
+    elevation_relative_std: Optional[float] = None
+    elevation_relative_min: Optional[float] = None
+    elevation_relative_max: Optional[float] = None
+    slope_deg_mean: Optional[float] = None
+    slope_deg_max: Optional[float] = None
+    roughness_m_mean: Optional[float] = None
+    dataset_provenance: Optional[Dict[str, Any]] = None
 
 
 class DataCoverageItem(BaseModel):
