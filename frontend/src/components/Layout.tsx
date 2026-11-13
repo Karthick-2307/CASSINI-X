@@ -11,6 +11,7 @@ const navLinks = [
   { path: "/geology", label: "Geology" },
   { path: "/mission", label: "Mission" },
   { path: "/reports", label: "Reports" },
+  { path: "/assistant", label: "Assistant" },
   { path: "/about", label: "About" },
 ];
 

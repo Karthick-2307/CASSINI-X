@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   SectionHeading,
   Card,
   Badge,
+  Button,
 } from "../components/ui";
 import {
   api,
@@ -98,20 +100,28 @@ export const Analysis: React.FC = () => {
           subtitle="Explore multi-dimensional feature space alignments comparing elevation, slope, and roughness distributions at standardized spatial scales."
         />
 
-        {/* Real Analysis Run Dropdown */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-mono text-text-muted">Active Run:</span>
-          <select
-            value={selectedAnalysisId || ""}
-            onChange={(e) => setSelectedAnalysisId(Number(e.target.value))}
-            className="bg-panel border border-border rounded-btn px-3 py-1.5 text-xs text-text-primary font-mono focus:outline-none"
-          >
-            {analysesList.map((a) => (
-              <option key={a.id} value={a.id}>
-                #{a.id} &ndash; {a.target_region_name} ({a.planet}) [{new Date(a.created_at).toLocaleDateString()}]
-              </option>
-            ))}
-          </select>
+        {/* Real Analysis Run Dropdown & Assistant Link */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-mono text-text-muted">Active Run:</span>
+            <select
+              value={selectedAnalysisId || ""}
+              onChange={(e) => setSelectedAnalysisId(Number(e.target.value))}
+              className="bg-panel border border-border rounded-btn px-3 py-1.5 text-xs text-text-primary font-mono focus:outline-none"
+            >
+              {analysesList.map((a) => (
+                <option key={a.id} value={a.id}>
+                  #{a.id} &ndash; {a.target_region_name} ({a.planet}) [{new Date(a.created_at).toLocaleDateString()}]
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Link to="/assistant">
+            <Button variant="secondary" size="sm">
+              Ask Assistant
+            </Button>
+          </Link>
         </div>
       </div>
 

@@ -176,13 +176,36 @@ class MissionProfile(Base):
     constraints_json = Column(Text, nullable=False)
 
 
+class MissionRoute(Base):
+    __tablename__ = "mission_routes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    region_id = Column(Integer, ForeignKey("regions.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    mode = Column(String(50), nullable=False)  # shortest, safest, balanced
+    path_geojson = Column(Text, nullable=False)
+    elevation_profile_json = Column(Text, nullable=False)
+    length_m = Column(Float, nullable=False)
+    total_ascent_m = Column(Float, nullable=False)
+    total_descent_m = Column(Float, nullable=False)
+    max_slope_deg = Column(Float, nullable=False)
+    mean_slope_deg = Column(Float, nullable=False)
+    difficulty_score = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    region = relationship("Region")
+
+
 class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
     analysis_id = Column(Integer, ForeignKey("analyses.id"), nullable=False, index=True)
+    candidate_ids_json = Column(Text, nullable=True)
+    route_id = Column(Integer, ForeignKey("mission_routes.id"), nullable=True)
     title = Column(String(150), nullable=False)
     file_path = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     analysis = relationship("Analysis")
+    route = relationship("MissionRoute")

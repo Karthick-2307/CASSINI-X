@@ -6,17 +6,21 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import numpy as np
+import rasterio
 
 from app.db import init_db, get_db
-from app.models import Planet, Dataset, Region, TerrainFeature, Analysis, CandidateMatch
+from app.models import Planet, Dataset, Region, TerrainFeature, Analysis, CandidateMatch, MissionRoute, Report
 import json
 from app.analysis.engine import run_analysis_pipeline
 from app.analysis.validate import execute_validation_pipeline
 from app.analysis.visualize import render_hillshade_png, render_slope_png, get_raster_bounds_info
+from app.analysis.pathfinding import run_astar, compute_route_statistics
+from app.reports.pdf_generator import generate_pdf_report
+from app.assistant.engine import process_assistant_query
 from app.schemas import (
     HealthResponse,
     PlanetResponse,
@@ -40,6 +44,19 @@ from app.schemas import (
     BboxSampleResponse,
     TerrainStatSummary,
     AnalysisSummaryItem,
+    SpectralEvidenceItem,
+    ResourceIntelligenceResponse,
+    ResourceComparisonRequest,
+    ResourceComparisonResponse,
+    LandingScreeningRequest,
+    LandingScreeningResponse,
+    RoutePlanRequest,
+    RouteOptionItem,
+    RoutePlanResponse,
+    ReportGenerateRequest,
+    ReportItemResponse,
+    AssistantQueryRequest,
+    AssistantQueryResponse,
 )
 
 load_dotenv()
@@ -593,6 +610,369 @@ def run_or_get_validation(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Validation execution failed: {str(e)}")
 
 
+# --- Part 7A: Geological & Resource Intelligence Endpoints ---
+
+@app.get("/api/resources/{region_id}", response_model=ResourceIntelligenceResponse, tags=["Geological & Resource Intelligence"])
+def get_resource_intelligence(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {region_id} not found.")
+
+    planet_name = region.planet.name if region.planet else "Unknown"
+    from app.ingest.spectral_base import get_provider_for_planet
+    provider = get_provider_for_planet(planet_name)
+
+    return ResourceIntelligenceResponse(
+        region_id=region.id,
+        region_name=region.name,
+        planet=planet_name,
+        status="no_data_ingested",
+        observed_evidence=[],
+        derived_indices=[],
+        inferred_resources=[],
+        water_ice_status="No water-ice dataset ingested",
+        available_provider={
+            "provider_id": provider.provider_id,
+            "name": provider.name,
+            "instrument": provider.instrument,
+            "product_level": provider.product_level,
+            "status": provider.status,
+            "portal_url": provider.portal_url,
+            "file_size_warning": provider.file_size_warning,
+            "credentials_required": provider.credentials_required
+        } if provider else None,
+        ingest_instructions=provider.get_ingest_instructions() if provider else None
+    )
+
+
+@app.post("/api/resources/compare", response_model=ResourceComparisonResponse, tags=["Geological & Resource Intelligence"])
+def compare_surface_materials(req: ResourceComparisonRequest, db: Session = Depends(get_db)):
+    reg_a = db.query(Region).filter(Region.id == req.region_a_id).first()
+    reg_b = db.query(Region).filter(Region.id == req.region_b_id).first()
+    if not reg_a or not reg_b:
+        raise HTTPException(status_code=404, detail="One or both regions not found.")
+
+    warning = (
+        "Surface material comparison is restricted to verified coincident spectral bands. "
+        "Cross-instrument mineral comparisons between CRISM (Mars), M3 (Moon), and EMIT (Earth) "
+        "require rigorous radiative transfer and spectral resampling harmonisation. "
+        "No spectral cubes are currently ingested for these regions."
+    )
+    return ResourceComparisonResponse(
+        region_a_name=reg_a.name,
+        region_b_name=reg_b.name,
+        common_features=[],
+        harmonisation_warning=warning
+    )
+
+
+# --- Part 7B: Mission Analysis & Rover Pathfinding Endpoints ---
+
+@app.post("/api/mission/screening", response_model=LandingScreeningResponse, tags=["Mission Analysis"])
+def run_landing_screening(req: LandingScreeningRequest, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == req.region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {req.region_id} not found.")
+
+    features = db.query(TerrainFeature).filter(TerrainFeature.region_id == req.region_id).all()
+    if not features:
+        raise HTTPException(status_code=404, detail="No terrain features available for landing screening.")
+
+    total_cells = len(features)
+    slope_pass = 0
+    rough_pass = 0
+    elev_pass = 0
+    both_pass = 0
+    flagged_hazards = []
+
+    for f in features:
+        s_ok = f.slope_deg is not None and f.slope_deg <= req.max_slope_deg
+        r_ok = f.roughness_m is not None and f.roughness_m <= req.max_roughness_m
+        e_ok = True
+        if req.min_elevation_m is not None and (f.elevation_relative is None or f.elevation_relative < req.min_elevation_m):
+            e_ok = False
+        if req.max_elevation_m is not None and (f.elevation_relative is None or f.elevation_relative > req.max_elevation_m):
+            e_ok = False
+
+        if s_ok:
+            slope_pass += 1
+        if r_ok:
+            rough_pass += 1
+        if e_ok:
+            elev_pass += 1
+        if s_ok and r_ok and e_ok:
+            both_pass += 1
+
+        if not s_ok or not r_ok:
+            if len(flagged_hazards) < 20:
+                flagged_hazards.append({
+                    "lat": f.lat,
+                    "lon": f.lon,
+                    "slope_deg": round(f.slope_deg, 2) if f.slope_deg is not None else None,
+                    "roughness_m": round(f.roughness_m, 2) if f.roughness_m is not None else None,
+                    "hazard": "Steep slope" if not s_ok else "High roughness"
+                })
+
+    pass_fraction = round(both_pass / total_cells, 4) if total_cells > 0 else 0.0
+    suitability_score = round(pass_fraction * 100.0, 1)
+
+    return LandingScreeningResponse(
+        region_id=region.id,
+        region_name=region.name,
+        planet=region.planet.name if region.planet else "Unknown",
+        total_cells=total_cells,
+        passing_cells=both_pass,
+        pass_fraction=pass_fraction,
+        mission_suitability_score=suitability_score,
+        criteria_breakdown={
+            "max_slope_deg": req.max_slope_deg,
+            "max_roughness_m": req.max_roughness_m,
+            "slope_pass_count": slope_pass,
+            "slope_pass_fraction": round(slope_pass / total_cells, 3),
+            "roughness_pass_count": rough_pass,
+            "roughness_pass_fraction": round(rough_pass / total_cells, 3),
+            "elevation_pass_count": elev_pass,
+        },
+        flagged_hazards=flagged_hazards,
+        environmental_factors={
+            "illumination": "Not assessed — dataset not ingested",
+            "radiation": "Not assessed — dataset not ingested",
+            "thermal": "Not assessed — dataset not ingested"
+        },
+        disclaimer_banner="Preliminary screening for scientific decision support. Not certified landing or habitation safety."
+    )
+
+
+@app.post("/api/mission/route", response_model=RoutePlanResponse, tags=["Mission Analysis"])
+def plan_rover_route(req: RoutePlanRequest, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == req.region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {req.region_id} not found.")
+
+    dataset = region.source_dataset
+    if not dataset or not dataset.local_path or not os.path.exists(dataset.local_path):
+        raise HTTPException(status_code=404, detail="No local raster data available for rover pathfinding.")
+
+    with rasterio.open(dataset.local_path) as src:
+        dem = src.read(1)
+        nodata = src.nodata
+        if nodata is not None:
+            dem = np.where(dem == nodata, np.nan, dem)
+
+        from app.analysis.features import compute_horn_slope
+        valid_dem = ~np.isnan(dem)
+        filled_dem = np.where(valid_dem, dem, np.nanmedian(dem))
+        slope_grid = compute_horn_slope(filled_dem, cell_size_m=500.0)
+
+        # Transform start & goal lon/lat to row/col
+        start_lon, start_lat = req.start_coords[0], req.start_coords[1]
+        goal_lon, goal_lat = req.goal_coords[0], req.goal_coords[1]
+
+        start_r, start_c = rasterio.transform.rowcol(src.transform, start_lon, start_lat)
+        goal_r, goal_c = rasterio.transform.rowcol(src.transform, goal_lon, goal_lat)
+
+        modes = ["shortest", "balanced", "safest"]
+        routes_output: List[RouteOptionItem] = []
+
+        for mode in modes:
+            path_cells, err = run_astar(
+                dem=filled_dem,
+                slope_grid=slope_grid,
+                cell_size_m=500.0,
+                start=(start_r, start_c),
+                goal=(goal_r, goal_c),
+                max_slope_deg=req.max_slope_deg or 25.0,
+                mode=mode
+            )
+
+            if path_cells:
+                stats = compute_route_statistics(path_cells, filled_dem, slope_grid, 500.0, src.transform)
+
+                # Persist route in database
+                route_entry = MissionRoute(
+                    region_id=region.id,
+                    name=f"{region.name} - {mode.title()} Route",
+                    mode=mode,
+                    path_geojson=json.dumps({"type": "LineString", "coordinates": stats["coordinates"]}),
+                    elevation_profile_json=json.dumps(stats["profile"]),
+                    length_m=stats["length_m"],
+                    total_ascent_m=stats["total_ascent_m"],
+                    total_descent_m=stats["total_descent_m"],
+                    max_slope_deg=stats["max_slope_deg"],
+                    mean_slope_deg=stats["mean_slope_deg"],
+                    difficulty_score=stats["difficulty_score"]
+                )
+                db.add(route_entry)
+                db.flush()
+
+                routes_output.append(
+                    RouteOptionItem(
+                        route_id=route_entry.id,
+                        name=route_entry.name,
+                        mode=mode,
+                        coordinates=stats["coordinates"],
+                        elevation_profile=stats["profile"],
+                        length_m=stats["length_m"],
+                        total_ascent_m=stats["total_ascent_m"],
+                        total_descent_m=stats["total_descent_m"],
+                        max_slope_deg=stats["max_slope_deg"],
+                        mean_slope_deg=stats["mean_slope_deg"],
+                        difficulty_score=stats["difficulty_score"]
+                    )
+                )
+
+        db.commit()
+
+        impassable_count = int(np.sum(slope_grid > (req.max_slope_deg or 25.0)))
+
+        if not routes_output:
+            return RoutePlanResponse(
+                status="unreachable",
+                message=f"No traversable path found between {req.start_coords} and {req.goal_coords}. Path is obstructed by steep terrain (> {req.max_slope_deg}°).",
+                routes=[],
+                impassable_zones_count=impassable_count
+            )
+
+        return RoutePlanResponse(
+            status="success",
+            message=f"Successfully computed {len(routes_output)} alternative routes across {region.name}.",
+            routes=routes_output,
+            impassable_zones_count=impassable_count
+        )
+
+
+@app.get("/api/mission/routes/{region_id}", response_model=List[RouteOptionItem], tags=["Mission Analysis"])
+def get_region_routes(region_id: int, db: Session = Depends(get_db)):
+    routes = (
+        db.query(MissionRoute)
+        .filter(MissionRoute.region_id == region_id)
+        .order_by(desc(MissionRoute.created_at))
+        .limit(10)
+        .all()
+    )
+    result = []
+    for r in routes:
+        coords = json.loads(r.path_geojson).get("coordinates", []) if r.path_geojson else []
+        prof = json.loads(r.elevation_profile_json) if r.elevation_profile_json else []
+        result.append(
+            RouteOptionItem(
+                route_id=r.id,
+                name=r.name,
+                mode=r.mode,
+                coordinates=coords,
+                elevation_profile=prof,
+                length_m=r.length_m,
+                total_ascent_m=r.total_ascent_m,
+                total_descent_m=r.total_descent_m,
+                max_slope_deg=r.max_slope_deg,
+                mean_slope_deg=r.mean_slope_deg,
+                difficulty_score=r.difficulty_score
+            )
+        )
+    return result
+
+
+# --- Part 7C: Scientific Reports Endpoints ---
+
+@app.post("/api/reports/generate", response_model=ReportItemResponse, tags=["Scientific Reports"])
+def generate_report_endpoint(req: ReportGenerateRequest, db: Session = Depends(get_db)):
+    analysis = db.query(Analysis).filter(Analysis.id == req.analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail=f"Analysis {req.analysis_id} not found.")
+
+    cand_query = db.query(CandidateMatch).filter(CandidateMatch.analysis_id == analysis.id)
+    if req.candidate_ids:
+        cand_query = cand_query.filter(CandidateMatch.id.in_(req.candidate_ids))
+    candidates = cand_query.order_by(desc(CandidateMatch.similarity_score)).all()
+
+    route = None
+    if req.route_id:
+        route = db.query(MissionRoute).filter(MissionRoute.id == req.route_id).first()
+
+    report_title = req.title or f"Analog Discovery Assessment - {analysis.target_region.name if analysis.target_region else 'Planetary Target'}"
+
+    try:
+        pdf_path = generate_pdf_report(
+            analysis=analysis,
+            candidates=candidates,
+            route=route,
+            output_dir="data/reports"
+        )
+    except Exception as e:
+        logger.error(f"PDF report generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PDF report generation failed: {str(e)}")
+
+    file_size = os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0
+
+    report_record = Report(
+        analysis_id=analysis.id,
+        candidate_ids_json=json.dumps(req.candidate_ids or [c.id for c in candidates]),
+        route_id=req.route_id,
+        title=report_title,
+        file_path=pdf_path
+    )
+    db.add(report_record)
+    db.commit()
+    db.refresh(report_record)
+
+    return ReportItemResponse(
+        id=report_record.id,
+        analysis_id=analysis.id,
+        title=report_record.title,
+        file_path=report_record.file_path,
+        file_size_bytes=file_size,
+        created_at=report_record.created_at.isoformat() if report_record.created_at else ""
+    )
+
+
+@app.get("/api/reports", response_model=List[ReportItemResponse], tags=["Scientific Reports"])
+def list_reports(db: Session = Depends(get_db)):
+    reports = db.query(Report).order_by(desc(Report.created_at)).all()
+    results = []
+    for r in reports:
+        sz = os.path.getsize(r.file_path) if os.path.exists(r.file_path) else 0
+        results.append(
+            ReportItemResponse(
+                id=r.id,
+                analysis_id=r.analysis_id,
+                title=r.title,
+                file_path=r.file_path,
+                file_size_bytes=sz,
+                created_at=r.created_at.isoformat() if r.created_at else ""
+            )
+        )
+    return results
+
+
+@app.get("/api/reports/{report_id}/download", tags=["Scientific Reports"])
+def download_report(report_id: int, db: Session = Depends(get_db)):
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Report {report_id} not found.")
+
+    if not os.path.exists(report.file_path):
+        raise HTTPException(status_code=404, detail="Report PDF file not found on disk.")
+
+    return FileResponse(
+        path=report.file_path,
+        filename=os.path.basename(report.file_path),
+        media_type="application/pdf"
+    )
+
+
+# --- Part 7D: Scientific Assistant Endpoints ---
+
+@app.post("/api/assistant/query", response_model=AssistantQueryResponse, tags=["Scientific Assistant"])
+def ask_assistant(req: AssistantQueryRequest, db: Session = Depends(get_db)):
+    result = process_assistant_query(
+        db=db,
+        query_text=req.query,
+        region_id=req.region_id,
+        analysis_id=req.analysis_id
+    )
+    return AssistantQueryResponse(**result)
+
+
 # --- Future Endpoints: HTTP 501 Placeholders ---
 
 @app.api_route(
@@ -604,5 +984,5 @@ def run_or_get_validation(db: Session = Depends(get_db)):
 def planned_endpoints(path: str):
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=f"Endpoint '/api/{path}' is not implemented yet. Scheduled for upcoming phases (Parts 6-7)."
+        detail=f"Endpoint '/api/{path}' is not implemented yet."
     )

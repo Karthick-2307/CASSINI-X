@@ -9,6 +9,7 @@ import { Analysis } from "./pages/Analysis";
 import { Geology } from "./pages/Geology";
 import { Mission } from "./pages/Mission";
 import { Reports } from "./pages/Reports";
+import { Assistant } from "./pages/Assistant";
 import { About } from "./pages/About";
 import { NotFound } from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ export const App: React.FC = () => {
           <Route path="geology" element={<Geology />} />
           <Route path="mission" element={<Mission />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="assistant" element={<Assistant />} />
           <Route path="about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Route>
