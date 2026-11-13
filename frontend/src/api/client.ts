@@ -46,6 +46,32 @@ export interface AnalogMatch {
   target_planet: string;
 }
 
+export interface DataCoverageItem {
+  dataset_id: number;
+  name: string;
+  planet: string;
+  coverage_percent: number | null;
+}
+
+export interface RecentAnalysisItem {
+  id: number;
+  reference_region: string;
+  created_at: string;
+  top_similarity: number | null;
+  status: string;
+}
+
+export interface DashboardSummaryResponse {
+  processed_locations: number;
+  planetary_regions: number;
+  candidate_locations: number;
+  datasets_ingested: number;
+  analyses_run: number;
+  data_coverage: DataCoverageItem[];
+  recent_analyses: RecentAnalysisItem[];
+  demo_mode: boolean;
+}
+
 export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
   try {
@@ -83,12 +109,11 @@ export const api = {
   getHealth: () => apiClient<HealthStatus>("/api/health"),
   getPlanets: () => apiClient<Planet[]>("/api/planets"),
   getDatasets: () => apiClient<Dataset[]>("/api/datasets"),
-  // Safe fetch for featured discoveries: returns [] if endpoint is unimplemented/empty
+  getDashboardSummary: () => apiClient<DashboardSummaryResponse>("/api/dashboard/summary"),
   getFeaturedAnalogs: async (limit: number = 3): Promise<AnalogMatch[]> => {
     try {
       return await apiClient<AnalogMatch[]>(`/api/analogs?limit=${limit}`);
     } catch {
-      // Empty by design in Phase 2
       return [];
     }
   },

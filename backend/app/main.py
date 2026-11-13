@@ -8,10 +8,20 @@ from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
 from app.db import init_db, get_db
-from app.models import Planet, Dataset
-from app.schemas import HealthResponse, PlanetResponse, DatasetResponse, ErrorEnvelope, ErrorDetail
+from app.models import Planet, Dataset, Region, Analysis, CandidateMatch
+from app.schemas import (
+    HealthResponse,
+    PlanetResponse,
+    DatasetResponse,
+    DashboardSummaryResponse,
+    DataCoverageItem,
+    RecentAnalysisItem,
+    ErrorEnvelope,
+    ErrorDetail,
+)
 
 load_dotenv()
 
@@ -82,7 +92,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 
-# --- Implemented Endpoints for Phase 1 ---
+# --- Implemented Endpoints ---
 
 @app.get("/api/health", response_model=HealthResponse, tags=["System"])
 def get_health():
@@ -105,6 +115,82 @@ def get_datasets(db: Session = Depends(get_db)):
     return datasets
 
 
+@app.get("/api/dashboard/summary", response_model=DashboardSummaryResponse, tags=["Dashboard"])
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    # 1. Processed Earth locations
+    earth_planet = db.query(Planet).filter(Planet.name == "Earth").first()
+    earth_planet_id = earth_planet.id if earth_planet else None
+
+    processed_locations = (
+        db.query(Region).filter(Region.planet_id == earth_planet_id).count()
+        if earth_planet_id
+        else 0
+    )
+
+    # 2. Planetary target regions (Moon & Mars)
+    planetary_regions = (
+        db.query(Region).filter(Region.planet_id != earth_planet_id).count()
+        if earth_planet_id
+        else 0
+    )
+
+    # 3. Candidate analog matches
+    candidate_locations = db.query(CandidateMatch).count()
+
+    # 4. Ingested datasets
+    datasets_count = db.query(Dataset).count()
+
+    # 5. Analyses run
+    analyses_count = db.query(Analysis).count()
+
+    # 6. Data coverage per dataset
+    coverage_items: List[DataCoverageItem] = []
+    datasets = db.query(Dataset).all()
+    for ds in datasets:
+        planet_name = ds.planet.name if ds.planet else "Unknown"
+        coverage_items.append(
+            DataCoverageItem(
+                dataset_id=ds.id,
+                name=ds.name,
+                planet=planet_name,
+                coverage_percent=None  # Explicitly None until calculated in Part 4
+            )
+        )
+
+    # 7. Recent analyses list
+    recent_analyses: List[RecentAnalysisItem] = []
+    analyses = db.query(Analysis).order_by(desc(Analysis.created_at)).limit(5).all()
+    for a in analyses:
+        target_name = a.target_region.name if a.target_region else "Target Region"
+        top_match = (
+            db.query(CandidateMatch)
+            .filter(CandidateMatch.analysis_id == a.id)
+            .order_by(desc(CandidateMatch.similarity_score))
+            .first()
+        )
+        top_sim = top_match.similarity_score if top_match else None
+        recent_analyses.append(
+            RecentAnalysisItem(
+                id=a.id,
+                reference_region=target_name,
+                created_at=a.created_at.isoformat() if a.created_at else "",
+                top_similarity=top_sim,
+                status=a.status
+            )
+        )
+
+    return DashboardSummaryResponse(
+        processed_locations=processed_locations,
+        planetary_regions=planetary_regions,
+        candidate_locations=candidate_locations,
+        datasets_ingested=datasets_count,
+        analyses_run=analyses_count,
+        data_coverage=coverage_items,
+        recent_analyses=recent_analyses,
+        demo_mode=DEMO_MODE
+    )
+
+
 # --- Future Endpoints: HTTP 501 Placeholders ---
 
 @app.api_route(
@@ -118,4 +204,3 @@ def planned_endpoints(path: str):
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail=f"Endpoint '/api/{path}' is not implemented yet. Scheduled for upcoming phases (Parts 4-7)."
     )
-

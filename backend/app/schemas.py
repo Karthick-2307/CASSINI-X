@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
@@ -33,6 +34,32 @@ class DatasetResponse(BaseModel):
     licence: Optional[str] = None
 
 
+class DataCoverageItem(BaseModel):
+    dataset_id: int
+    name: str
+    planet: str
+    coverage_percent: Optional[float] = None
+
+
+class RecentAnalysisItem(BaseModel):
+    id: int
+    reference_region: str
+    created_at: str
+    top_similarity: Optional[float] = None
+    status: str
+
+
+class DashboardSummaryResponse(BaseModel):
+    processed_locations: int
+    planetary_regions: int
+    candidate_locations: int
+    datasets_ingested: int
+    analyses_run: int
+    data_coverage: List[DataCoverageItem]
+    recent_analyses: List[RecentAnalysisItem]
+    demo_mode: bool
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str
@@ -40,4 +67,3 @@ class ErrorDetail(BaseModel):
 
 class ErrorEnvelope(BaseModel):
     error: ErrorDetail
-

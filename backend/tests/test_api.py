@@ -53,8 +53,23 @@ def test_datasets_empty_by_default(client):
     assert response.status_code == 200
     datasets = response.json()
     assert isinstance(datasets, list)
-    # Datasets are empty until ingested in Phase 4
     assert len(datasets) == 0
+
+
+def test_dashboard_summary_empty_database(client):
+    response = client.get("/api/dashboard/summary")
+    assert response.status_code == 200
+    data = response.json()
+
+    # On fresh database, all counts must be strictly 0 without invented numbers
+    assert data["processed_locations"] == 0
+    assert data["planetary_regions"] == 0
+    assert data["candidate_locations"] == 0
+    assert data["datasets_ingested"] == 0
+    assert data["analyses_run"] == 0
+    assert data["data_coverage"] == []
+    assert data["recent_analyses"] == []
+    assert isinstance(data["demo_mode"], bool)
 
 
 def test_unimplemented_endpoint_returns_501(client):
@@ -63,4 +78,3 @@ def test_unimplemented_endpoint_returns_501(client):
     data = response.json()
     assert "error" in data
     assert data["error"]["code"] == "HTTP_501"
-
