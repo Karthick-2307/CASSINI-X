@@ -133,3 +133,4 @@ def test_heuristic_never_overestimates():
 
         assert octile_h <= true_min_cost + 1e-9
         assert euclid_h <= true_min_cost + 1e-9
+

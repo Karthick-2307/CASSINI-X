@@ -232,3 +232,4 @@ def compute_route_statistics(
         "profile": profile,
         "coordinates": coords
     }
+

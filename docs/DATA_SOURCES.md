@@ -60,7 +60,43 @@ This document catalogues the official provenance, access endpoints, spatial reso
 
 ---
 
-## 4. Manual Ingestion Workflow (Offline / Air-Gapped)
+## 4. Mineralogy & Hyperspectral Datasets (Provider Registry)
+
+Per Part 7 specifications, mineralogical datasets across planetary bodies rely on distinct imaging spectrometers with non-equivalent calibration pipelines:
+
+### NASA Earth Surface Mineral Dust Source Investigation (EMIT) — Earth
+- **Platform:** International Space Station (ISS)
+- **Spectral Range:** 381–2493 nm (285 bands across VNIR/SWIR)
+- **Spatial Resolution:** ~60 meters/pixel GSD
+- **Product Level:** L2A Surface Reflectance (`EMITL2ARFL`)
+- **Credentials:** Free NASA Earthdata Login required
+- **Raw File Size:** ~1.8 GB per netCDF4 granule cube
+- **Licence:** NASA Open Data Policy (Public Access)
+- **Status in Catalog:** `not_ingested` (Prerequisite for Phase 9)
+
+### Chandrayaan-1 Moon Mineralogy Mapper ($\text{M}^3$) — Moon
+- **Platform:** ISRO Chandrayaan-1 / NASA Instrument
+- **Spectral Range:** 430–3000 nm (85 spectral channels)
+- **Spatial Resolution:** ~140 meters/pixel (Global mode)
+- **Product Level:** Level 2 Target Reflectance
+- **Credentials:** NASA PDS Geosciences Node (Public PDS Archive)
+- **Raw File Size:** ~450 MB per observation strip (IMG/LBL)
+- **Licence:** NASA / ISRO Open Planetary Archive
+- **Status in Catalog:** `not_ingested` (Prerequisite for Phase 9)
+
+### MRO Compact Reconnaissance Imaging Spectrometer for Mars (CRISM) — Mars
+- **Platform:** NASA Mars Reconnaissance Orbiter (MRO)
+- **Spectral Range:** 362–3920 nm (544 channels)
+- **Spatial Resolution:** 18–36 meters/pixel (Targeted mode)
+- **Product Level:** MTRDR / TRDR Calibrated Spectral Cubes
+- **Credentials:** NASA Planetary Data System (PDS)
+- **Raw File Size:** 1.2–4.5 GB per observation cube
+- **Licence:** NASA Open Planetary Data
+- **Status in Catalog:** `not_ingested` (Prerequisite for Phase 9)
+
+---
+
+## 5. Manual Ingestion Workflow (Offline / Air-Gapped)
 
 If network access to USGS or AWS servers is unavailable or blocked:
 1. **Download the target raster manually** from the official links above.

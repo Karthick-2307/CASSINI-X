@@ -246,3 +246,4 @@ def process_assistant_query(
             "sources": [],
             "engine": "deterministic_template"
         }
+

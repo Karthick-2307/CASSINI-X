@@ -489,3 +489,91 @@ def test_scientific_assistant_endpoint(client):
     })
     assert res_unknown.status_code == 200
     assert "Scientific Assistant" in res_unknown.json()["answer"]
+
+
+# --- Part 8.1: Comprehensive Error Handling (404, 422, Unavailable Data) ---
+
+def test_api_404_not_found_handling(client):
+    """
+    Test 8.1: Every entity detail and download endpoint returns 404 for non-existent IDs.
+    """
+    # 1. Non-existent region
+    res = client.get("/api/regions/999999")
+    assert res.status_code == 404
+    assert "not found" in str(res.json()).lower()
+
+    # 2. Non-existent terrain bounds
+    res = client.get("/api/terrain/999999/bounds")
+    assert res.status_code == 404
+
+    # 3. Non-existent analysis
+    res = client.get("/api/analysis/999999")
+    assert res.status_code == 404
+
+    # 4. Non-existent analog match
+    res = client.get("/api/analogs/999999")
+    assert res.status_code == 404
+
+    # 5. Non-existent report download
+    res = client.get("/api/reports/999999/download")
+    assert res.status_code == 404
+
+
+def test_api_422_validation_error_handling(client):
+    """
+    Test 8.1: Endpoints reject malformed payloads with 422 Unprocessable Entity.
+    """
+    # 1. sample-bbox missing required fields
+    res = client.post("/api/terrain/sample-bbox", json={"min_lon": "not_a_number"})
+    assert res.status_code == 422
+
+    # 2. analysis/run with empty body
+    res = client.post("/api/analysis/run", json={})
+    assert res.status_code == 422
+
+    # 3. mission/screening with missing region_id
+    res = client.post("/api/mission/screening", json={})
+    assert res.status_code == 422
+
+    # 4. mission/route with missing start_coords
+    res = client.post("/api/mission/route", json={"region_id": 1})
+    assert res.status_code == 422
+
+    # 5. reports/generate with missing analysis_id
+    res = client.post("/api/reports/generate", json={})
+    assert res.status_code == 422
+
+    # 6. assistant/query with missing query field
+    res = client.post("/api/assistant/query", json={})
+    assert res.status_code == 422
+
+
+def test_api_unavailable_and_boundary_data_handling(client):
+    """
+    Test 8.1: Endpoints gracefully report unavailable data or out-of-bounds coordinates.
+    """
+    # 1. Sample bbox outside raster coverage
+    res = client.post("/api/terrain/sample-bbox", json={
+        "min_lon": 170.0,
+        "min_lat": -80.0,
+        "max_lon": 171.0,
+        "max_lat": -79.0,
+        "region_id": 1
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "outside_coverage"
+    assert "outside" in data["message"].lower()
+
+    # 2. Pathfinding with unreachable goal (e.g. goal outside raster coverage)
+    res_route = client.post("/api/mission/route", json={
+        "region_id": 1,
+        "start_coords": [-13.63, 29.03],
+        "goal_coords": [100.0, -80.0],
+        "optimization_mode": "balanced"
+    })
+    assert res_route.status_code == 200
+    data_route = res_route.json()
+    assert data_route["status"] == "unreachable"
+    assert "no traversable path" in data_route["message"].lower()
+

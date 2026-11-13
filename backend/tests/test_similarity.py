@@ -314,3 +314,68 @@ def test_feature_contributions_and_explanations():
     assert len(expl["differences"]) >= 1
     assert any("Slope" in d for d in expl["differences"])
 
+
+def test_robust_scaler_edge_cases():
+    """
+    Test edge cases in fit_robust_scaler and inverse_transform_robust_scaler:
+    - 1D input throws ValueError
+    - Feature mismatch throws ValueError
+    - Empty candidate array throws ValueError
+    - Constant feature (zero IQR) falls back to 1.0
+    - Inverse transform accurately inverts transformed values
+    """
+    # 1. 1D input
+    with pytest.raises(ValueError, match="must be 2D"):
+        fit_robust_scaler(np.array([1.0, 2.0, 3.0]), ["f1"])
+
+    # 2. Column count mismatch
+    with pytest.raises(ValueError, match="Feature count mismatch"):
+        fit_robust_scaler(np.zeros((5, 3)), ["f1", "f2"])
+
+    # 3. Empty candidates
+    with pytest.raises(ValueError, match="empty candidate array"):
+        fit_robust_scaler(np.zeros((0, 2)), ["f1", "f2"])
+
+    # 4. Constant feature (all values identical) -> zero IQR fallback to 1.0
+    constant_data = np.ones((10, 2)) * 42.0
+    params = fit_robust_scaler(constant_data, ["f1", "f2"])
+    assert params["f1"]["iqr"] == 1.0
+    assert params["f1"]["median"] == 42.0
+
+    # 5. Inverse transform round-trip
+    varied_data = np.array([[10.0, 20.0], [20.0, 40.0], [30.0, 60.0]])
+    params_var = fit_robust_scaler(varied_data, ["a", "b"])
+    transformed = transform_robust_scaler(varied_data, ["a", "b"], params_var)
+    inversed = inverse_transform_robust_scaler(transformed, ["a", "b"], params_var)
+    assert np.allclose(varied_data, inversed, atol=1e-5)
+
+
+def test_clustering_kmeans_edge_cases():
+    """
+    Test clustering edge cases with too few samples or valid small clustering.
+    """
+    data = np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
+    res = run_kmeans_clustering(data, data, np.array([2.0, 3.0]), ["f1", "f2"], k_range=(2, 3))
+    assert res["method"] == "kmeans"
+    assert "best_k" in res
+    assert len(res["labels"]) == 3
+
+
+def test_validate_evaluation_summary_metrics():
+    """
+    Test evaluate_summary_metrics on exact rank distributions.
+    """
+    ranks = [1, 2, 3, 4, 5]
+    pool_sizes = [10] * 5
+    summary = evaluate_summary_metrics(ranks, pool_sizes, top_k_list=[1, 3, 5])
+    assert summary["count"] == 5
+    assert summary["mean_rank"] == 3.0
+    assert summary["median_rank"] == 3.0
+    assert summary["hit_rates"]["hit_at_1"] == 0.2
+    assert summary["hit_rates"]["hit_at_3"] == 0.6
+    assert summary["hit_rates"]["hit_at_5"] == 1.0
+    # MRR for [1, 2, 3, 4, 5] = (1/1 + 1/2 + 1/3 + 1/4 + 1/5) / 5
+    expected_mrr = (1.0 + 0.5 + 1.0/3.0 + 0.25 + 0.2) / 5.0
+    assert pytest.approx(summary["mrr"], abs=1e-3) == expected_mrr
+
+

@@ -156,13 +156,17 @@ def generate_pdf_report(
     ]
 
     for i, c in enumerate(candidates[:10]):
+        coord_str = f"{c.lat:.2f}°, {c.lon:.2f}°" if (c.lat is not None and c.lon is not None) else "—"
+        sim_str = f"{c.similarity_score:.1f}%" if c.similarity_score is not None else "—"
+        conf_str = f"{c.confidence_score:.1f}%" if c.confidence_score is not None else "—"
+        suit_str = "—" if c.mission_suitability_score is None else f"{c.mission_suitability_score:.1f}%"
         table_data.append([
             str(i + 1),
             c.location_name or "Earth Candidate",
-            f"{c.lat:.2f}°, {c.lon:.2f}°",
-            f"{c.similarity_score:.1f}%",
-            f"{c.confidence_score:.1f}%",
-            "—" if c.mission_suitability_score is None else f"{c.mission_suitability_score:.1f}%",
+            coord_str,
+            sim_str,
+            conf_str,
+            suit_str,
             f"C{c.cluster_id or 0}",
             "Unusual" if c.is_anomaly else "Nominal"
         ])
@@ -286,3 +290,4 @@ def generate_pdf_report(
 
     doc.build(story)
     return filepath
+

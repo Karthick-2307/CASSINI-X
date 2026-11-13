@@ -1,0 +1,33 @@
+# ASTRA-X Multi-Container Docker Compose Specification
+# Optional & Untested deployment template per Part 8 instructions.
+
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: astrax-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ASTRAX_DB_PATH=data/astrax.db
+      - ASTRAX_DATA_DIR=data
+      - ASTRAX_DEMO_MODE=false
+    volumes:
+      - astrax-data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: astrax-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  astrax-data:
+    driver: local
