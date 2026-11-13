@@ -297,3 +297,4 @@ def execute_validation_pipeline(
     db_session.commit()
 
     return report_payload
+

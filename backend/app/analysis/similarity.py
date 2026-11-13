@@ -198,3 +198,4 @@ def generate_explanation_text(
         "similarities": similarities,
         "differences": differences
     }
+

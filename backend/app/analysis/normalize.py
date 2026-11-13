@@ -126,3 +126,4 @@ def inverse_transform_robust_scaler(
         arr[:, i] = arr[:, i] * params["iqr"] + params["median"]
 
     return arr[0] if is_1d else arr
+

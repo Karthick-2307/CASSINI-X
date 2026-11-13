@@ -161,3 +161,4 @@ def run_dbscan_clustering(
         "noise_count": noise_count,
         "labels": [int(l) for l in labels]
     }
+

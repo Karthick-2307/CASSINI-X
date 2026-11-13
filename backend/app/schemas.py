@@ -203,3 +203,55 @@ class BenchmarkValidationResponse(BaseModel):
     benchmark_evaluations: List[Dict[str, Any]]
     metrics_summary: Dict[str, Any]
     statistical_power_note: str
+
+
+# --- Part 6: Explorer and Mapping Schemas ---
+
+class TerrainBoundsResponse(BaseModel):
+    region_id: int
+    name: str
+    planet: str
+    bbox: List[float]  # [min_lon, min_lat, max_lon, max_lat]
+    coordinates: List[List[float]]  # 4 corner coords for MapLibre image source
+    center: List[float]  # [lon, lat]
+    dataset_name: str
+    resolution_m: Optional[float] = None
+    source: str
+
+
+class BboxSampleRequest(BaseModel):
+    min_lon: float
+    min_lat: float
+    max_lon: float
+    max_lat: float
+    planet_name: Optional[str] = None
+    region_id: Optional[int] = None
+
+
+class TerrainStatSummary(BaseModel):
+    mean: float
+    std: float
+    min: float
+    max: float
+
+
+class BboxSampleResponse(BaseModel):
+    status: str  # "ok" or "outside_coverage"
+    message: str
+    region_name: Optional[str] = None
+    cell_count: int
+    elevation_relative: Optional[TerrainStatSummary] = None
+    slope_deg: Optional[TerrainStatSummary] = None
+    roughness_m: Optional[TerrainStatSummary] = None
+    sample_points: Optional[List[Dict[str, Any]]] = None
+
+
+class AnalysisSummaryItem(BaseModel):
+    id: int
+    target_region_id: int
+    target_region_name: str
+    planet: str
+    created_at: str
+    status: str
+    candidate_count: int
+    top_similarity: Optional[float] = None

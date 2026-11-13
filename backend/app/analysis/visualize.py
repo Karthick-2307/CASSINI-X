@@ -1,25 +1,39 @@
+"""
+Terrain visualization module for generating hillshade and slope PNG overlays.
+
+Generates transparent RGBA PNG overlays suitable for direct MapLibre GL
+image-source mapping at accurate geographic bounds.
+"""
+
+import io
 import os
-import glob
+from typing import Tuple, Dict, Any, Optional
 import numpy as np
 import rasterio
-import matplotlib.pyplot as plt
+from PIL import Image
+
 from app.analysis.features import compute_horn_slope
 
-PROCESSED_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "processed"))
+# In-memory overlay cache to avoid recomputing identical rasters
+_OVERLAY_CACHE: Dict[str, bytes] = {}
 
 
-def generate_hillshade(dem: np.ndarray, cell_size: float = 500.0, azimuth_deg: float = 315.0, altitude_deg: float = 45.0) -> np.ndarray:
+def generate_hillshade_array(
+    dem: np.ndarray,
+    cell_size: float = 500.0,
+    azimuth_deg: float = 315.0,
+    altitude_deg: float = 45.0
+) -> np.ndarray:
     """
     Computes standard hillshade illumination array (0 to 255).
     """
     azimuth_rad = np.radians(360.0 - azimuth_deg + 90.0)
     altitude_rad = np.radians(altitude_deg)
 
-    # Compute gradients with Horn method
     slope_deg = compute_horn_slope(dem, cell_size_m=cell_size)
     slope_rad = np.radians(slope_deg)
 
-    # Gradient directions
+    # Gradient kernels for Horn's method
     kernel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]) / (8.0 * cell_size)
     kernel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]]) / (8.0 * cell_size)
 
@@ -38,51 +52,125 @@ def generate_hillshade(dem: np.ndarray, cell_size: float = 500.0, azimuth_deg: f
     return hillshade
 
 
-def run_visual_check(tif_path: str = None):
+def colorize_slope_array(slope_deg: np.ndarray, max_slope_deg: float = 25.0) -> np.ndarray:
     """
-    Renders hillshade and slope maps to PNG in data/processed/.
+    Colorize slope values (0 to max_slope_deg) using a smooth Magma/Heat color ramp in pure NumPy.
+    Returns RGB uint8 array of shape (H, W, 3).
     """
-    if tif_path is None or not os.path.exists(tif_path):
-        tifs = glob.glob(os.path.join(PROCESSED_DIR, "*.tif"))
-        if not tifs:
-            print("No processed GeoTIFF found. Run an ingest script first.")
-            return
-        tif_path = tifs[0]
+    norm = np.clip(slope_deg / max_slope_deg, 0.0, 1.0)
 
-    print(f"Generating visual inspection for: {tif_path}")
+    # 4-stop color ramp:
+    # 0.0 -> Deep violet [40, 15, 60]
+    # 0.33 -> Magenta [140, 30, 95]
+    # 0.66 -> Orange/Red [230, 80, 40]
+    # 1.0 -> Yellow/White [255, 230, 100]
+    c0 = np.array([40, 15, 60], dtype=float)
+    c1 = np.array([140, 30, 95], dtype=float)
+    c2 = np.array([230, 80, 40], dtype=float)
+    c3 = np.array([255, 230, 100], dtype=float)
+
+    rgb = np.zeros((slope_deg.shape[0], slope_deg.shape[1], 3), dtype=np.uint8)
+
+    # Segment 1: [0, 0.33]
+    m1 = norm <= 0.33
+    t1 = (norm[m1] / 0.33)[..., None]
+    rgb[m1] = np.clip(c0 + t1 * (c1 - c0), 0, 255).astype(np.uint8)
+
+    # Segment 2: (0.33, 0.66]
+    m2 = (norm > 0.33) & (norm <= 0.66)
+    t2 = ((norm[m2] - 0.33) / 0.33)[..., None]
+    rgb[m2] = np.clip(c1 + t2 * (c2 - c1), 0, 255).astype(np.uint8)
+
+    # Segment 3: (0.66, 1.0]
+    m3 = norm > 0.66
+    t3 = ((norm[m3] - 0.66) / 0.34)[..., None]
+    rgb[m3] = np.clip(c2 + t3 * (c3 - c2), 0, 255).astype(np.uint8)
+
+    return rgb
+
+
+def render_hillshade_png(tif_path: str) -> bytes:
+    """
+    Renders hillshade overlay as PNG bytes with alpha transparency on nodata.
+    """
+    cache_key = f"hillshade_{tif_path}"
+    if cache_key in _OVERLAY_CACHE:
+        return _OVERLAY_CACHE[cache_key]
+
     with rasterio.open(tif_path) as src:
         dem = src.read(1)
         nodata = src.nodata
         if nodata is not None:
             dem = np.where(dem == nodata, np.nan, dem)
 
-    # Fill NaNs with median for smooth hillshading
     valid_mask = ~np.isnan(dem)
     filled_dem = np.where(valid_mask, dem, np.nanmedian(dem))
 
-    hillshade = generate_hillshade(filled_dem, cell_size=500.0)
+    hs = generate_hillshade_array(filled_dem, cell_size=500.0)
+
+    rgba = np.zeros((hs.shape[0], hs.shape[1], 4), dtype=np.uint8)
+    rgba[..., 0] = hs
+    rgba[..., 1] = hs
+    rgba[..., 2] = hs
+    rgba[..., 3] = np.where(valid_mask, 210, 0).astype(np.uint8)
+
+    img = Image.fromarray(rgba, "RGBA")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+
+    _OVERLAY_CACHE[cache_key] = png_bytes
+    return png_bytes
+
+
+def render_slope_png(tif_path: str) -> bytes:
+    """
+    Renders slope overlay as colorized PNG bytes with alpha transparency on nodata.
+    """
+    cache_key = f"slope_{tif_path}"
+    if cache_key in _OVERLAY_CACHE:
+        return _OVERLAY_CACHE[cache_key]
+
+    with rasterio.open(tif_path) as src:
+        dem = src.read(1)
+        nodata = src.nodata
+        if nodata is not None:
+            dem = np.where(dem == nodata, np.nan, dem)
+
+    valid_mask = ~np.isnan(dem)
+    filled_dem = np.where(valid_mask, dem, np.nanmedian(dem))
+
     slope_deg = compute_horn_slope(filled_dem, cell_size_m=500.0)
+    rgb = colorize_slope_array(slope_deg, max_slope_deg=25.0)
 
-    # Save Composite Inspection Plot
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    rgba = np.zeros((slope_deg.shape[0], slope_deg.shape[1], 4), dtype=np.uint8)
+    rgba[..., 0:3] = rgb
+    rgba[..., 3] = np.where(valid_mask, 195, 0).astype(np.uint8)
 
-    im0 = axes[0].imshow(hillshade, cmap="gray")
-    axes[0].set_title(f"Terrain Hillshade ({os.path.basename(tif_path)})", fontsize=12, fontweight="bold")
-    axes[0].axis("off")
+    img = Image.fromarray(rgba, "RGBA")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
 
-    im1 = axes[1].imshow(slope_deg, cmap="magma", vmin=0, vmax=30)
-    axes[1].set_title("Slope Inclination (Degrees)", fontsize=12, fontweight="bold")
-    axes[1].axis("off")
-    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04, label="Slope (°)")
-
-    plt.tight_layout()
-    out_png = os.path.join(PROCESSED_DIR, "visual_check_hillshade_slope.png")
-    plt.savefig(out_png, dpi=150)
-    plt.close()
-
-    print(f"Visual check figure generated successfully: {out_png}")
-    return out_png
+    _OVERLAY_CACHE[cache_key] = png_bytes
+    return png_bytes
 
 
-if __name__ == "__main__":
-    run_visual_check()
+def get_raster_bounds_info(tif_path: str) -> Dict[str, Any]:
+    """
+    Extracts geographic bounds and MapLibre image coordinate quadruplet.
+    """
+    with rasterio.open(tif_path) as src:
+        bounds = src.bounds
+        left, bottom, right, top = bounds.left, bounds.bottom, bounds.right, bounds.top
+
+    return {
+        "bbox": [left, bottom, right, top],
+        "coordinates": [
+            [left, top],      # top-left
+            [right, top],     # top-right
+            [right, bottom],  # bottom-right
+            [left, bottom]    # bottom-left
+        ],
+        "center": [(left + right) / 2.0, (bottom + top) / 2.0]
+    }

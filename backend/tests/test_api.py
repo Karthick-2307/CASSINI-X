@@ -263,3 +263,87 @@ def test_benchmark_validation_endpoint(client):
     assert isinstance(val_data["benchmark_evaluations"], list)
     assert "model" in val_data["metrics_summary"]
     assert "baseline_slope" in val_data["metrics_summary"]
+
+
+# --- Part 6: Explorer and Overlay API Tests ---
+
+def test_terrain_bounds_endpoint(client):
+    """
+    Test retrieving exact geographic bounds and MapLibre image coordinates.
+    """
+    res = client.get("/api/terrain/2/bounds")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["region_id"] == 2
+    assert "Jezero" in data["name"]
+    assert data["planet"] == "Mars"
+    assert len(data["bbox"]) == 4
+    assert len(data["coordinates"]) == 4
+    assert len(data["center"]) == 2
+
+
+def test_terrain_overlay_png_endpoints(client):
+    """
+    Test generating and retrieving hillshade and slope PNG overlays.
+    """
+    # Hillshade overlay
+    hs_res = client.get("/api/terrain/2/hillshade.png")
+    assert hs_res.status_code == 200
+    assert hs_res.headers["content-type"] == "image/png"
+    assert len(hs_res.content) > 1000  # Non-empty PNG
+
+    # Slope overlay
+    slope_res = client.get("/api/terrain/2/slope.png")
+    assert slope_res.status_code == 200
+    assert slope_res.headers["content-type"] == "image/png"
+    assert len(slope_res.content) > 1000
+
+
+def test_sample_bbox_endpoint(client):
+    """
+    Test real bounding box sampling (inside coverage) and outside coverage rejection.
+    """
+    # 1. Inside coverage for Jezero (bounds approx 77.15 to 78.01, 17.95 to 18.81)
+    inside_res = client.post("/api/terrain/sample-bbox", json={
+        "min_lon": 77.2,
+        "min_lat": 18.0,
+        "max_lon": 77.8,
+        "max_lat": 18.5,
+        "region_id": 2
+    })
+    assert inside_res.status_code == 200
+    inside_data = inside_res.json()
+    assert inside_data["status"] == "ok"
+    assert inside_data["cell_count"] > 0
+    assert inside_data["elevation_relative"] is not None
+    assert inside_data["slope_deg"] is not None
+    assert inside_data["roughness_m"] is not None
+
+    # 2. Outside coverage rejection
+    outside_res = client.post("/api/terrain/sample-bbox", json={
+        "min_lon": 10.0,
+        "min_lat": -50.0,
+        "max_lon": 12.0,
+        "max_lat": -48.0,
+        "region_id": 2
+    })
+    assert outside_res.status_code == 200
+    outside_data = outside_res.json()
+    assert outside_data["status"] == "outside_coverage"
+    assert outside_data["cell_count"] == 0
+    assert "outside ingested dataset coverage" in outside_data["message"]
+
+
+def test_analyses_list_endpoint(client):
+    """
+    Test retrieving past analyses summary list.
+    """
+    res = client.get("/api/analyses")
+    assert res.status_code == 200
+    data = res.json()
+    assert isinstance(data, list)
+    if len(data) > 0:
+        first = data[0]
+        assert "target_region_name" in first
+        assert "planet" in first
+        assert "candidate_count" in first

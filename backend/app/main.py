@@ -6,15 +6,17 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+import numpy as np
 
 from app.db import init_db, get_db
 from app.models import Planet, Dataset, Region, TerrainFeature, Analysis, CandidateMatch
 import json
 from app.analysis.engine import run_analysis_pipeline
 from app.analysis.validate import execute_validation_pipeline
+from app.analysis.visualize import render_hillshade_png, render_slope_png, get_raster_bounds_info
 from app.schemas import (
     HealthResponse,
     PlanetResponse,
@@ -33,6 +35,11 @@ from app.schemas import (
     FeatureComparisonItem,
     ExplanationItem,
     BenchmarkValidationResponse,
+    TerrainBoundsResponse,
+    BboxSampleRequest,
+    BboxSampleResponse,
+    TerrainStatSummary,
+    AnalysisSummaryItem,
 )
 
 load_dotenv()
@@ -199,6 +206,134 @@ def get_terrain_summary(region_id: int, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/api/terrain/{region_id}/bounds", response_model=TerrainBoundsResponse, tags=["Terrain Intelligence"])
+def get_terrain_bounds(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {region_id} not found.")
+    dataset = region.source_dataset
+    if not dataset or not dataset.local_path or not os.path.exists(dataset.local_path):
+        raise HTTPException(status_code=404, detail=f"No local raster data available for region '{region.name}'.")
+
+    bounds_info = get_raster_bounds_info(dataset.local_path)
+    return TerrainBoundsResponse(
+        region_id=region.id,
+        name=region.name,
+        planet=region.planet.name if region.planet else "Unknown",
+        bbox=bounds_info["bbox"],
+        coordinates=bounds_info["coordinates"],
+        center=bounds_info["center"],
+        dataset_name=dataset.name,
+        resolution_m=dataset.resolution_m,
+        source=dataset.source
+    )
+
+
+@app.get("/api/terrain/{region_id}/hillshade.png", tags=["Terrain Intelligence"])
+def get_terrain_hillshade(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {region_id} not found.")
+    dataset = region.source_dataset
+    if not dataset or not dataset.local_path or not os.path.exists(dataset.local_path):
+        raise HTTPException(status_code=404, detail=f"No local raster data available for region '{region.name}'.")
+
+    png_bytes = render_hillshade_png(dataset.local_path)
+    return Response(content=png_bytes, media_type="image/png")
+
+
+@app.get("/api/terrain/{region_id}/slope.png", tags=["Terrain Intelligence"])
+def get_terrain_slope(region_id: int, db: Session = Depends(get_db)):
+    region = db.query(Region).filter(Region.id == region_id).first()
+    if not region:
+        raise HTTPException(status_code=404, detail=f"Region {region_id} not found.")
+    dataset = region.source_dataset
+    if not dataset or not dataset.local_path or not os.path.exists(dataset.local_path):
+        raise HTTPException(status_code=404, detail=f"No local raster data available for region '{region.name}'.")
+
+    png_bytes = render_slope_png(dataset.local_path)
+    return Response(content=png_bytes, media_type="image/png")
+
+
+@app.post("/api/terrain/sample-bbox", response_model=BboxSampleResponse, tags=["Terrain Intelligence"])
+def sample_terrain_bbox(req: BboxSampleRequest, db: Session = Depends(get_db)):
+    min_lon = min(req.min_lon, req.max_lon)
+    max_lon = max(req.min_lon, req.max_lon)
+    min_lat = min(req.min_lat, req.max_lat)
+    max_lat = max(req.min_lat, req.max_lat)
+
+    query = db.query(TerrainFeature)
+    if req.region_id:
+        query = query.filter(TerrainFeature.region_id == req.region_id)
+    elif req.planet_name:
+        query = query.join(TerrainFeature.region).join(Region.planet).filter(Planet.name.ilike(f"%{req.planet_name}%"))
+
+    query = query.filter(
+        TerrainFeature.lat >= min_lat,
+        TerrainFeature.lat <= max_lat,
+        TerrainFeature.lon >= min_lon,
+        TerrainFeature.lon <= max_lon
+    )
+    cells = query.all()
+
+    if not cells:
+        all_regions = db.query(Region).all()
+        reg_names = [r.name for r in all_regions if r.source_dataset and r.source_dataset.local_path]
+        return BboxSampleResponse(
+            status="outside_coverage",
+            message=f"Selected bounding box [{min_lon:.2f}, {min_lat:.2f}, {max_lon:.2f}, {max_lat:.2f}] is outside ingested dataset coverage. Ingested study areas: {', '.join(reg_names)}.",
+            cell_count=0
+        )
+
+    elevs = [c.elevation_relative for c in cells if c.elevation_relative is not None]
+    slopes = [c.slope_deg for c in cells if c.slope_deg is not None]
+    roughs = [c.roughness_m for c in cells if c.roughness_m is not None]
+
+    elev_stat = TerrainStatSummary(
+        mean=round(float(np.mean(elevs)), 2),
+        std=round(float(np.std(elevs)), 2),
+        min=round(float(np.min(elevs)), 2),
+        max=round(float(np.max(elevs)), 2)
+    ) if elevs else None
+
+    slope_stat = TerrainStatSummary(
+        mean=round(float(np.mean(slopes)), 2),
+        std=round(float(np.std(slopes)), 2),
+        min=round(float(np.min(slopes)), 2),
+        max=round(float(np.max(slopes)), 2)
+    ) if slopes else None
+
+    rough_stat = TerrainStatSummary(
+        mean=round(float(np.mean(roughs)), 2),
+        std=round(float(np.std(roughs)), 2),
+        min=round(float(np.min(roughs)), 2),
+        max=round(float(np.max(roughs)), 2)
+    ) if roughs else None
+
+    samples = [
+        {
+            "id": c.id,
+            "lat": c.lat,
+            "lon": c.lon,
+            "elevation_relative": round(c.elevation_relative, 2) if c.elevation_relative is not None else None,
+            "slope_deg": round(c.slope_deg, 2) if c.slope_deg is not None else None,
+            "roughness_m": round(c.roughness_m, 2) if c.roughness_m is not None else None,
+        }
+        for c in cells[:50]
+    ]
+
+    return BboxSampleResponse(
+        status="ok",
+        message=f"Extracted real elevation, slope, and roughness statistics from {len(cells)} cells.",
+        region_name=cells[0].region.name if cells[0].region else "Unknown",
+        cell_count=len(cells),
+        elevation_relative=elev_stat,
+        slope_deg=slope_stat,
+        roughness_m=rough_stat,
+        sample_points=samples
+    )
+
+
 @app.get("/api/dashboard/summary", response_model=DashboardSummaryResponse, tags=["Dashboard"])
 def get_dashboard_summary(db: Session = Depends(get_db)):
     earth_planet = db.query(Planet).filter(Planet.name == "Earth").first()
@@ -302,6 +437,39 @@ def serialize_candidate_match(match: CandidateMatch) -> CandidateMatchResponse:
 
 
 # --- Part 5: Similarity Engine & Analog Discovery Endpoints ---
+
+@app.get("/api/analyses", response_model=List[AnalysisSummaryItem], tags=["Similarity Engine"])
+def get_analyses(db: Session = Depends(get_db)):
+    analyses = db.query(Analysis).order_by(desc(Analysis.created_at)).all()
+    results = []
+    for a in analyses:
+        target_name = a.target_region.name if a.target_region else "Unknown"
+        planet_name = (
+            a.target_region.planet.name
+            if a.target_region and a.target_region.planet
+            else "Unknown"
+        )
+        top_cand = (
+            db.query(CandidateMatch)
+            .filter(CandidateMatch.analysis_id == a.id)
+            .order_by(desc(CandidateMatch.similarity_score))
+            .first()
+        )
+        cand_count = db.query(CandidateMatch).filter(CandidateMatch.analysis_id == a.id).count()
+        results.append(
+            AnalysisSummaryItem(
+                id=a.id,
+                target_region_id=a.target_region_id,
+                target_region_name=target_name,
+                planet=planet_name,
+                created_at=a.created_at.isoformat() if a.created_at else "",
+                status=a.status,
+                candidate_count=cand_count,
+                top_similarity=top_cand.similarity_score if top_cand else None
+            )
+        )
+    return results
+
 
 @app.post("/api/analysis/run", response_model=AnalysisRunResponse, tags=["Similarity Engine"])
 def run_analysis(req: AnalysisRunRequest, db: Session = Depends(get_db)):

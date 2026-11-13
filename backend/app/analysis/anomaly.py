@@ -50,3 +50,4 @@ def detect_anomalies(
     is_anomaly_mask = (preds == -1)
 
     return is_anomaly_mask, scores, ANOMALY_LABEL_DESCRIPTOR
+
