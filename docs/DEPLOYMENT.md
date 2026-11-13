@@ -99,3 +99,4 @@ While SQLite with local GeoTIFF streaming provides zero-configuration deployment
      ```
 3. **Raster Storage**:
    - Instead of local `.tif` files, use `raster2pgsql` to store tiled rasters directly in PostgreSQL with spatial Pyramids / Overviews for sub-second spatial queries.
+

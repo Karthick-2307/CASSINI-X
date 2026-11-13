@@ -42,3 +42,4 @@ In accordance with the scientific transparency guidelines of Project ASTRA-X, th
 ### 6. Limited Ground Truth Benchmark Pool
 - Current automated baseline validation evaluates 1 active benchmark pairing (Mare Tranquillitatis vs. Lanzarote Volcanic Field across 358 candidate cells).
 - Statistical conclusions regarding retrieval power are bounded by this pool size until additional field sites (Atacama Desert, Devon Island, Kilauea, McMurdo Dry Valleys) are ingested.
+

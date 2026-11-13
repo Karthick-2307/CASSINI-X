@@ -31,3 +31,4 @@ services:
 volumes:
   astrax-data:
     driver: local
+

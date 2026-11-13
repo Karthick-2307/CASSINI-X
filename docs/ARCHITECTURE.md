@@ -127,3 +127,4 @@ ASTRA-X enforces strict architectural separation between three distinct evaluati
 1. **Similarity Score ($S$)**: Multi-attribute mathematical proximity calculated from normalized feature distance ($S = 100 \cdot e^{-d}$).
 2. **Confidence Score ($C$)**: Data quality and measurement integrity score derived from spatial resolution, valid cell fraction, and sensor precision.
 3. **Mission Suitability Score ($M$)**: Operational traversability and terrain smoothness screening evaluated against engineering thresholds. Never blended with similarity.
+

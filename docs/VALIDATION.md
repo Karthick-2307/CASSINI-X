@@ -73,3 +73,4 @@ In accordance with Part 0 Section 0.7 scientific integrity guidelines, the follo
 3. **Low-Dimensional Feature Space**: The current engine evaluates three topographic parameters: relative elevation, slope, and surface roughness. It does not incorporate spectral absorption, thermal inertia, or regolith grain size.
 4. **Uncalibrated Similarity Function**: The exponential transformation $S = 100 \cdot \exp(-d)$ is an interpretable metric distance decay; it is not a calibrated posterior probability of geological identity.
 5. **No Certification of Safety**: Suitability scores reflect terrain smoothness and slope gradients only; they are never certified for spacecraft landing or human exploration safety.
+

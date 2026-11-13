@@ -36,3 +36,4 @@ This document outlines planned engineering milestones and scientific capabilitie
 ## Phase 13: Advanced Mission Simulation
 - **Power & Thermal Budgeting**: Integrate solar flux calculations and rover power draw along planned traverse routes.
 - **Multi-Agent Collaborative Routing**: Coordinated pathfinding for multiple rovers and aerial scout drones (e.g. Ingenuity-class rotorcraft).
+
