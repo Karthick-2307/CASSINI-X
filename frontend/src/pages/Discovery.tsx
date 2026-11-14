@@ -13,6 +13,7 @@ import {
   UnifiedDiscoverySearch,
   GoogleEarthGlobeView,
   DiscoveryResultsSection,
+  LocationImagePopout,
   filterCandidates,
 } from "../components/discovery";
 
@@ -263,6 +264,16 @@ export const Discovery: React.FC = () => {
           onScrollToDetails={scrollToDetails}
         />
       </div>
+
+      {/* POP-OUT SATELLITE IMAGE OF CLICKED LOCATION BELOW THE MAP */}
+      {selectedCandidate && (
+        <LocationImagePopout
+          candidate={selectedCandidate}
+          targetRegionName={activeRegionObj?.name || `${selectedPlanetName} Terrain`}
+          uploadedImageUrl={uploadedImageUrl}
+          onScrollToDetails={scrollToDetails}
+        />
+      )}
 
       {/* 4. DETAILS BELOW: WHY IT MATCHES & STATISTICS GRAPH */}
       <DiscoveryResultsSection

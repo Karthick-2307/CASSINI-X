@@ -3,6 +3,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { CandidateMatch } from "../../api/client";
 import { getBasemapStyle, BASEMAP_OPTIONS } from "../map/mapStyles";
+import { getAnalogSiteImage } from "../../lib/analogImages";
 import { Badge, Button } from "../ui";
 
 export interface GoogleEarthGlobeViewProps {
@@ -263,62 +264,78 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
       <div ref={mapContainerRef} className="w-full h-[480px]" />
 
       {/* Interactive Pop-out Card for Selected Candidate */}
-      {selectedCandidate && showPopupCard && (
-        <div className="absolute bottom-4 right-4 z-20 max-w-sm w-full bg-[#111826]/95 backdrop-blur-md border border-[#243044] rounded-card p-3.5 shadow-2xl space-y-2.5 animate-fadeIn">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono text-[#38BDF8] font-bold">#1 MATCH</span>
-                <Badge variant="active">Terrestrial Analog</Badge>
+      {selectedCandidate && showPopupCard && (() => {
+        const analogImg = getAnalogSiteImage(selectedCandidate.location_name, selectedCandidate.lat, selectedCandidate.lon);
+        return (
+          <div className="absolute bottom-4 right-4 z-20 max-w-sm w-full bg-[#111826]/95 backdrop-blur-md border border-[#243044] rounded-card p-3.5 shadow-2xl space-y-2.5 animate-fadeIn">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-mono text-[#38BDF8] font-bold">#1 MATCH</span>
+                  <Badge variant="active">Terrestrial Analog</Badge>
+                </div>
+                <h4 className="text-sm font-heading font-semibold text-[#F8FAFC] mt-0.5">
+                  {selectedCandidate.location_name}
+                </h4>
+                <div className="text-[11px] font-mono text-[#94A3B8]">
+                  {selectedCandidate.lat.toFixed(4)}°N, {selectedCandidate.lon.toFixed(4)}°E
+                </div>
               </div>
-              <h4 className="text-sm font-heading font-semibold text-[#F8FAFC] mt-0.5">
-                {selectedCandidate.location_name}
-              </h4>
-              <div className="text-[11px] font-mono text-[#94A3B8]">
-                {selectedCandidate.lat.toFixed(4)}°N, {selectedCandidate.lon.toFixed(4)}°E
+
+              <button
+                type="button"
+                onClick={() => setShowPopupCard(false)}
+                className="text-[#94A3B8] hover:text-[#F8FAFC] text-sm p-1 leading-none"
+                title="Close card"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Satellite Image Preview */}
+            <div className="relative rounded overflow-hidden border border-[#243044] h-28 bg-[#070B14] group">
+              <img
+                src={analogImg.primarySatelliteUrl}
+                alt={selectedCandidate.location_name}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-1.5 text-[10px] font-mono text-[#F8FAFC] flex justify-between items-center">
+                <span className="truncate pr-1">{analogImg.provider}</span>
+                <span className="text-[#38BDF8] shrink-0">{analogImg.resolution}</span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowPopupCard(false)}
-              className="text-[#94A3B8] hover:text-[#F8FAFC] text-sm p-1 leading-none"
-              title="Close card"
-            >
-              &times;
-            </button>
-          </div>
-
-          {/* Scores Bar */}
-          <div className="grid grid-cols-2 gap-2 font-mono">
-            <div className="p-2 rounded bg-[#162033] border border-[#243044]">
-              <span className="text-[10px] text-[#94A3B8] uppercase block">Similarity</span>
-              <span className="text-base font-bold text-[#38BDF8]">
-                {selectedCandidate.similarity.toFixed(1)}%
-              </span>
+            {/* Scores Bar */}
+            <div className="grid grid-cols-2 gap-2 font-mono">
+              <div className="p-2 rounded bg-[#162033] border border-[#243044]">
+                <span className="text-[10px] text-[#94A3B8] uppercase block">Similarity</span>
+                <span className="text-base font-bold text-[#38BDF8]">
+                  {selectedCandidate.similarity.toFixed(1)}%
+                </span>
+              </div>
+              <div className="p-2 rounded bg-[#162033] border border-[#243044]">
+                <span className="text-[10px] text-[#94A3B8] uppercase block">Confidence</span>
+                <span className="text-base font-bold text-[#34D399]">
+                  {selectedCandidate.confidence.toFixed(1)}%
+                </span>
+              </div>
             </div>
-            <div className="p-2 rounded bg-[#162033] border border-[#243044]">
-              <span className="text-[10px] text-[#94A3B8] uppercase block">Confidence</span>
-              <span className="text-base font-bold text-[#34D399]">
-                {selectedCandidate.confidence.toFixed(1)}%
-              </span>
-            </div>
-          </div>
 
-          {/* Jump to match statistics below */}
-          {onScrollToDetails && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onScrollToDetails}
-              className="w-full text-[11px] py-1.5 flex items-center justify-center space-x-1 text-[#38BDF8] border-[#38BDF8]/40 hover:bg-[#162033]"
-            >
-              <span>View Why It Matches &amp; Statistics Graph</span>
-              <span>↓</span>
-            </Button>
-          )}
-        </div>
-      )}
+            {/* Jump to match statistics below */}
+            {onScrollToDetails && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onScrollToDetails}
+                className="w-full text-[11px] py-1.5 flex items-center justify-center space-x-1 text-[#38BDF8] border-[#38BDF8]/40 hover:bg-[#162033]"
+              >
+                <span>View Full Pop-out Image &amp; Details Below</span>
+                <span>↓</span>
+              </Button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Similarity Legend (Bottom Left) */}
       <div className="absolute bottom-4 left-3 z-10 hidden sm:block pointer-events-none">

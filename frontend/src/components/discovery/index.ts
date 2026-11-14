@@ -10,3 +10,4 @@ export * from "./ReferenceRegionViewer";
 export * from "./UnifiedDiscoverySearch";
 export * from "./GoogleEarthGlobeView";
 export * from "./DiscoveryResultsSection";
+export * from "./LocationImagePopout";
