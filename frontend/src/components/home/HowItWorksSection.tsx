@@ -33,14 +33,14 @@ export const HowItWorksSection: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {steps.map((step) => (
-          <Card key={step.num} className="space-y-3 bg-surface border-border p-6">
-            <span className="text-sm font-mono font-semibold text-accent">
+          <Card key={step.num} className="space-y-3 bg-[#111826] border border-[#243044] p-6 hover:border-[#38BDF8]/50 transition-colors shadow-sm">
+            <span className="text-sm font-mono font-bold text-[#38BDF8]">
               0{step.num}
             </span>
-            <h3 className="text-lg font-heading font-semibold text-text-primary">
+            <h3 className="text-lg font-heading font-semibold text-[#F8FAFC] leading-snug">
               {step.title}
             </h3>
-            <p className="text-sm text-text-muted leading-relaxed font-sans">
+            <p className="text-sm text-[#94A3B8] leading-relaxed font-sans">
               {step.description}
             </p>
           </Card>

@@ -9,10 +9,14 @@ export default {
     extend: {
       colors: {
         background: "#0B0F17",
+        canvas: "#0B0F17",
         surface: "#111826",
+        panel: "#111826",
         raised: "#162033",
-        border: "#1E293B",
-        "text-primary": "#E5E7EB",
+        border: "#243044",
+        primary: "#F8FAFC",
+        "text-primary": "#F8FAFC",
+        muted: "#94A3B8",
         "text-muted": "#94A3B8",
         accent: "#38BDF8",
         "accent-cyan": "#38BDF8",
@@ -22,9 +26,6 @@ export default {
           error: "#F87171",
           danger: "#F87171",
         },
-        // Backward-compatible semantic aliases
-        canvas: "#0B0F17",
-        panel: "#111826",
       },
       fontFamily: {
         sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],

@@ -47,10 +47,10 @@ export const PlanetarySearchBar: React.FC<PlanetarySearchBarProps> = ({
   return (
     <div ref={containerRef} className="relative w-full space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-mono text-text-muted">
+        <label className="text-xs font-mono text-[#94A3B8]">
           Search Planetary Terrain &amp; Craters
         </label>
-        <span className="text-[10px] font-mono text-accent-cyan">Live IAU Gazetteer</span>
+        <span className="text-[10px] font-mono text-accent">Live IAU Gazetteer</span>
       </div>
 
       <div className="relative">
@@ -63,10 +63,10 @@ export const PlanetarySearchBar: React.FC<PlanetarySearchBarProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={`Search ${selectedPlanetName} terrain (e.g. Gale, Tycho, Olympus, Valles...)`}
-          className="w-full bg-raised border border-border rounded-btn px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-cyan pr-8 font-mono"
+          className="w-full bg-[#162033] border border-[#243044] rounded-btn px-3 py-2 text-xs text-[#F8FAFC] placeholder:text-[#94A3B8]/60 focus:outline-none focus:border-accent pr-8 font-mono shadow-sm"
         />
         {isLoading && (
-          <span className="absolute right-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-cyan animate-pulse" />
+          <span className="absolute right-7 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent animate-pulse" />
         )}
         {searchTerm && (
           <button
@@ -74,7 +74,7 @@ export const PlanetarySearchBar: React.FC<PlanetarySearchBarProps> = ({
               setSearchTerm("");
               setIsOpen(false);
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary text-xs"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC] text-xs"
           >
             &times;
           </button>
@@ -83,15 +83,15 @@ export const PlanetarySearchBar: React.FC<PlanetarySearchBarProps> = ({
 
       {/* Autocomplete Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute left-0 right-0 top-full mt-1 bg-panel border border-border rounded-panel shadow-panel z-50 max-h-60 overflow-y-auto divide-y divide-border">
+        <div className="absolute left-0 right-0 top-full mt-1 bg-[#111826] border border-[#243044] rounded-panel shadow-lg z-50 max-h-60 overflow-y-auto divide-y divide-[#243044]">
           {results.map((item) => (
             <div
               key={item.id}
               onClick={() => handleSelect(item)}
-              className="p-2.5 hover:bg-raised cursor-pointer transition-colors space-y-1"
+              className="p-2.5 hover:bg-[#162033] cursor-pointer transition-colors space-y-1"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-text-primary">{item.name}</span>
+                <span className="text-xs font-bold text-[#F8FAFC]">{item.name}</span>
                 <Badge variant={item.is_ingested ? "derived" : "neutral"}>
                   {item.is_ingested ? "DEM Ingested" : "Gazetteer"}
                 </Badge>
@@ -123,7 +123,7 @@ export const PlanetarySearchBar: React.FC<PlanetarySearchBarProps> = ({
             key={item.id}
             type="button"
             onClick={() => handleSelect(item)}
-            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-raised hover:bg-border text-text-muted hover:text-text-primary border border-border/80 transition-colors"
+            className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#162033] hover:bg-[#243044] text-[#94A3B8] hover:text-[#F8FAFC] border border-[#243044] transition-colors"
           >
             {item.name.split(" ")[0]}
           </button>

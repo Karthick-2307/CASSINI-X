@@ -210,14 +210,14 @@ export const Discovery: React.FC = () => {
         />
 
         {/* Mode Switch (Image vs Region) */}
-        <div className="inline-flex items-center p-1 rounded-btn bg-surface border border-border">
+        <div className="inline-flex items-center p-1 rounded-btn bg-[#162033] border border-[#243044] shadow-sm">
           <button
             type="button"
             onClick={() => handleModeChange("image")}
             className={`px-4 py-1.5 rounded text-xs font-sans font-medium transition-colors ${
               currentMode === "image"
-                ? "bg-raised text-accent font-semibold border border-border"
-                : "text-text-muted hover:text-text-primary"
+                ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
+                : "text-[#94A3B8] hover:text-[#F8FAFC]"
             }`}
           >
             Image Mode
@@ -227,8 +227,8 @@ export const Discovery: React.FC = () => {
             onClick={() => handleModeChange("region")}
             className={`px-4 py-1.5 rounded text-xs font-sans font-medium transition-colors ${
               currentMode === "region"
-                ? "bg-raised text-accent font-semibold border border-border"
-                : "text-text-muted hover:text-text-primary"
+                ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
+                : "text-[#94A3B8] hover:text-[#F8FAFC]"
             }`}
           >
             Region Mode
@@ -277,14 +277,14 @@ export const Discovery: React.FC = () => {
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between pb-1">
             {/* Viewport switch: Earth Candidates vs Target Region */}
-            <div className="inline-flex items-center p-0.5 rounded bg-surface border border-border text-xs font-sans">
+            <div className="inline-flex items-center p-1 rounded-btn bg-[#162033] border border-[#243044] text-xs font-sans shadow-sm">
               <button
                 type="button"
                 onClick={() => setCenterView("earth")}
                 className={`px-3 py-1 rounded transition-colors ${
                   centerView === "earth"
-                    ? "bg-raised text-accent font-medium border border-border"
-                    : "text-text-muted hover:text-text-primary"
+                    ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
                 }`}
               >
                 Earth Candidates ({filteredCandidates.length})
@@ -294,8 +294,8 @@ export const Discovery: React.FC = () => {
                 onClick={() => setCenterView("reference")}
                 className={`px-3 py-1 rounded transition-colors ${
                   centerView === "reference"
-                    ? "bg-raised text-accent font-medium border border-border"
-                    : "text-text-muted hover:text-text-primary"
+                    ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
                 }`}
               >
                 Target {selectedPlanetName} Region

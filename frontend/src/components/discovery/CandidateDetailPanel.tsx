@@ -31,13 +31,13 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
 
   if (!selectedCandidate) {
     return (
-      <Card className="lg:col-span-3 space-y-4 border-border bg-surface">
-        <h3 className="text-sm font-heading font-semibold text-text-primary">
+      <Card className="lg:col-span-3 space-y-4 border-[#243044] bg-[#111826] p-5 shadow-sm">
+        <h3 className="text-sm font-heading font-semibold text-[#F8FAFC]">
           Candidate Analysis
         </h3>
-        <div className="py-16 text-center text-xs text-text-muted font-sans space-y-1">
-          <div>No candidate selected</div>
-          <p className="text-[11px] text-text-muted/70">
+        <div className="py-16 text-center text-xs text-[#94A3B8] font-sans space-y-1">
+          <div className="text-[#E5E7EB] font-medium">No candidate selected</div>
+          <p className="text-[11px] text-[#94A3B8]/80">
             Click any row in the ranking table or map pin to inspect candidate characteristics.
           </p>
         </div>
@@ -128,24 +128,24 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
   };
 
   return (
-    <Card className="lg:col-span-3 space-y-4 border-border bg-surface text-xs font-sans">
+    <Card className="lg:col-span-3 space-y-4 border-[#243044] bg-[#111826] p-5 shadow-sm text-xs font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-border">
+      <div className="flex items-center justify-between pb-3 border-b border-[#243044]">
         <div>
-          <h3 className="text-sm font-heading font-semibold text-text-primary">
+          <h3 className="text-sm font-heading font-semibold text-[#F8FAFC]">
             {selectedCandidate.location_name}
           </h3>
-          <div className="text-[11px] font-mono text-text-muted">
+          <div className="text-[11px] font-mono text-[#94A3B8]">
             {selectedCandidate.lat.toFixed(4)}°N, {selectedCandidate.lon.toFixed(4)}°E
           </div>
         </div>
-        <Badge variant="derived">
+        <Badge variant="derived" className="bg-[#162033] border-[#38BDF8]/40 text-[#38BDF8] font-mono font-bold">
           {selectedCandidate.similarity.toFixed(1)}% Sim
         </Badge>
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex items-center space-x-1 p-0.5 rounded bg-raised border border-border">
+      <div className="flex items-center space-x-1 p-1 rounded-btn bg-[#162033] border border-[#243044]">
         {(["summary", "features", "explanation", "sources"] as DetailTab[]).map((tab) => (
           <button
             key={tab}
@@ -153,8 +153,8 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-1 text-center rounded capitalize text-[11px] font-medium transition-colors ${
               activeTab === tab
-                ? "bg-surface text-accent font-semibold"
-                : "text-text-muted hover:text-text-primary"
+                ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
+                : "text-[#94A3B8] hover:text-[#F8FAFC]"
             }`}
           >
             {tab}
@@ -166,15 +166,15 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
       {activeTab === "summary" && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 font-mono">
-            <div className="p-2.5 rounded bg-raised border border-border">
-              <span className="text-[10px] uppercase text-text-muted block">Similarity Score</span>
-              <span className="text-base font-bold text-accent">
+            <div className="p-3 rounded-card bg-[#162033] border border-[#243044] shadow-sm">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8] block mb-1">Similarity Score</span>
+              <span className="text-xl font-mono font-bold text-[#38BDF8]">
                 {selectedCandidate.similarity.toFixed(1)}%
               </span>
             </div>
-            <div className="p-2.5 rounded bg-raised border border-border">
-              <span className="text-[10px] uppercase text-text-muted block">Confidence Score</span>
-              <span className="text-base font-bold text-status-ok">
+            <div className="p-3 rounded-card bg-[#162033] border border-[#243044] shadow-sm">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#94A3B8] block mb-1">Confidence Score</span>
+              <span className="text-xl font-mono font-bold text-[#34D399]">
                 {selectedCandidate.confidence.toFixed(1)}%
               </span>
             </div>
@@ -182,8 +182,8 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
 
           {/* Visual scale comparison if image mode */}
           {uploadedImageUrl && (
-            <div className="p-2.5 rounded bg-raised border border-border space-y-2">
-              <div className="text-[11px] font-medium text-text-primary">
+            <div className="p-3 rounded-card bg-[#162033] border border-[#243044] space-y-2 shadow-sm">
+              <div className="text-[11px] font-medium text-[#F8FAFC]">
                 Orbital Image vs Terrestrial Tile
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -191,17 +191,17 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
                   <img
                     src={uploadedImageUrl}
                     alt="Target orbital patch"
-                    className="h-20 w-full object-cover rounded border border-border"
+                    className="h-20 w-full object-cover rounded border border-[#243044]"
                   />
-                  <div className="text-[10px] font-mono text-text-muted mt-1 text-center">
+                  <div className="text-[10px] font-mono text-[#94A3B8] mt-1 text-center">
                     Target (~{uploadedResolutionMPerPx || 6} m/px)
                   </div>
                 </div>
                 <div>
-                  <div className="h-20 w-full bg-background rounded border border-border flex items-center justify-center text-[10px] font-mono text-text-muted">
+                  <div className="h-20 w-full bg-[#0B0F17] rounded border border-[#243044] flex items-center justify-center text-[10px] font-mono text-[#94A3B8]">
                     SRTM Tile (30m/px)
                   </div>
-                  <div className="text-[10px] font-mono text-text-muted mt-1 text-center">
+                  <div className="text-[10px] font-mono text-[#94A3B8] mt-1 text-center">
                     Earth Candidate
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
             </div>
           )}
 
-          <div className="p-2.5 rounded bg-raised/50 border border-border text-[11px] text-text-muted leading-relaxed">
+          <div className="p-3 rounded-card bg-[#162033]/60 border border-[#243044] text-[11px] text-[#94A3B8] leading-relaxed">
             ASTRA-X provides scientific decision support. Results do not certify landing or habitation safety.
           </div>
         </div>
@@ -361,8 +361,8 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
       )}
 
       {/* External Mapping Links */}
-      <div className="pt-2 border-t border-border space-y-1.5">
-        <span className="text-[10px] font-mono uppercase text-text-muted block">
+      <div className="pt-3 border-t border-[#243044] space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] block">
           External Visualization
         </span>
         <div className="grid grid-cols-2 gap-2">
@@ -370,7 +370,7 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
             href={googleMapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center py-1.5 px-2 rounded-btn bg-raised border border-border text-[11px] font-sans text-text-primary hover:border-accent/60 transition-colors"
+            className="inline-flex items-center justify-center py-2 px-2.5 rounded-btn bg-[#162033] border border-[#243044] text-xs font-sans font-medium text-[#F8FAFC] hover:border-[#38BDF8] hover:text-[#38BDF8] transition-colors shadow-sm"
           >
             Open in Google Maps ↗
           </a>
@@ -378,7 +378,7 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
             href={googleEarthUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center py-1.5 px-2 rounded-btn bg-raised border border-border text-[11px] font-sans text-text-primary hover:border-accent/60 transition-colors"
+            className="inline-flex items-center justify-center py-2 px-2.5 rounded-btn bg-[#162033] border border-[#243044] text-xs font-sans font-medium text-[#F8FAFC] hover:border-[#38BDF8] hover:text-[#38BDF8] transition-colors shadow-sm"
           >
             Open in Google Earth ↗
           </a>
@@ -386,18 +386,18 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
       </div>
 
       {/* Export Actions */}
-      <div className="pt-2 border-t border-border space-y-1.5">
-        <span className="text-[10px] font-mono uppercase text-text-muted block">
+      <div className="pt-3 border-t border-[#243044] space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] block">
           Export Candidate Data
         </span>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Button variant="secondary" size="sm" onClick={handleExportKML} className="text-[11px]">
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant="secondary" size="sm" onClick={handleExportKML} className="text-xs">
             KML
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleExportGeoJSON} className="text-[11px]">
+          <Button variant="secondary" size="sm" onClick={handleExportGeoJSON} className="text-xs">
             GeoJSON
           </Button>
-          <Button variant="secondary" size="sm" onClick={handleExportCSV} className="text-[11px]">
+          <Button variant="secondary" size="sm" onClick={handleExportCSV} className="text-xs">
             CSV
           </Button>
         </div>
@@ -407,7 +407,7 @@ export const CandidateDetailPanel: React.FC<CandidateDetailPanelProps> = ({
           size="sm"
           onClick={handleGeneratePdf}
           disabled={pdfGenerating}
-          className="w-full text-[11px] mt-1.5"
+          className="w-full text-xs font-semibold py-2 mt-2 shadow-sm"
         >
           {pdfGenerating ? "Generating..." : "Generate PDF report"}
         </Button>

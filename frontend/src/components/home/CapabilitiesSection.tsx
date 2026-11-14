@@ -35,12 +35,12 @@ export const CapabilitiesSection: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {items.map((item, idx) => (
-          <Card key={idx} className="space-y-2.5 bg-surface border-border p-5">
-            <span className="text-xs font-mono text-accent">0{idx + 1}</span>
-            <h3 className="text-base font-heading font-semibold text-text-primary">
+          <Card key={idx} className="space-y-2.5 bg-[#111826] border border-[#243044] p-5 hover:border-[#38BDF8]/50 transition-colors shadow-sm">
+            <span className="text-xs font-mono font-bold text-[#38BDF8]">0{idx + 1}</span>
+            <h3 className="text-base font-heading font-semibold text-[#F8FAFC] leading-snug">
               {item.title}
             </h3>
-            <p className="text-xs text-text-muted leading-relaxed font-sans">
+            <p className="text-xs text-[#94A3B8] leading-relaxed font-sans">
               {item.description}
             </p>
           </Card>

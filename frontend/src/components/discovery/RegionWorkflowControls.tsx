@@ -43,11 +43,11 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
   return (
     <div className="space-y-4 text-xs font-sans">
       {/* 1. Target Planet & Reference Region */}
-      <Card className="space-y-3 bg-surface border-border p-4">
-        <span className="font-semibold text-text-primary block">1. Reference Target</span>
+      <Card className="space-y-3 bg-[#111826] border border-[#243044] p-4 shadow-sm">
+        <span className="font-semibold text-[#F8FAFC] block">1. Reference Target</span>
 
         <div>
-          <label className="block text-[11px] text-text-muted mb-1">Target Celestial Body</label>
+          <label className="block text-[11px] text-[#94A3B8] mb-1">Target Celestial Body</label>
           <div className="grid grid-cols-2 gap-2">
             {activePlanetList.map((p) => {
               const active = p.name.toLowerCase() === selectedPlanetName.toLowerCase();
@@ -56,10 +56,10 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
                   key={p.id}
                   type="button"
                   onClick={() => setSelectedPlanetName(p.name)}
-                  className={`py-1.5 px-3 rounded-btn text-xs font-medium border text-center transition-colors ${
+                  className={`py-2 px-3 rounded-btn text-xs font-medium border text-center transition-colors shadow-sm ${
                     active
-                      ? "bg-raised text-accent border-border"
-                      : "bg-surface text-text-muted border-border hover:bg-raised"
+                      ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/40 font-semibold"
+                      : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:bg-[#162033] hover:text-[#F8FAFC]"
                   }`}
                 >
                   {p.name}
@@ -70,11 +70,11 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-[11px] text-text-muted mb-1">Ingested Reference Region</label>
+          <label className="block text-[11px] text-[#94A3B8] mb-1">Ingested Reference Region</label>
           <select
             value={selectedRegionId || ""}
             onChange={(e) => setSelectedRegionId(Number(e.target.value))}
-            className="w-full bg-raised border border-border rounded px-2.5 py-1.5 text-xs text-text-primary font-sans"
+            className="w-full bg-[#162033] border border-[#243044] rounded px-2.5 py-1.5 text-xs text-[#F8FAFC] font-sans focus:border-[#38BDF8] focus:outline-none"
           >
             {regions.map((r) => (
               <option key={r.id} value={r.id}>
@@ -85,8 +85,8 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
         </div>
 
         {/* IAU Gazetteer Search Integration */}
-        <div className="pt-1 border-t border-border space-y-1">
-          <label className="block text-[11px] text-text-muted">Or search IAU planetary gazetteer:</label>
+        <div className="pt-2 border-t border-[#243044] space-y-1">
+          <label className="block text-[11px] text-[#94A3B8]">Or search IAU planetary gazetteer:</label>
           <PlanetarySearchBar
             selectedPlanetName={selectedPlanetName}
             onSelectFeature={onSelectGazetteerFeature}
@@ -95,13 +95,13 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
       </Card>
 
       {/* 2. Physical Terrain Features */}
-      <Card className="space-y-3 bg-surface border-border p-4">
+      <Card className="space-y-3 bg-[#111826] border border-[#243044] p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-text-primary">2. Terrain Features</span>
+          <span className="font-semibold text-[#F8FAFC]">2. Terrain Features</span>
           <Badge variant="derived">Standardized 500m</Badge>
         </div>
 
-        <div className="space-y-2 text-text-primary">
+        <div className="space-y-2 text-[#F8FAFC]">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
@@ -109,7 +109,7 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
               onChange={() => onToggleFeature("elevation_relative")}
               className="rounded text-accent"
             />
-            <span className="font-medium">Relative Elevation (m)</span>
+            <span className="font-medium text-[#F8FAFC]">Relative Elevation (m)</span>
           </label>
 
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -119,7 +119,7 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
               onChange={() => onToggleFeature("slope_deg")}
               className="rounded text-accent"
             />
-            <span className="font-medium">Slope Gradient (deg)</span>
+            <span className="font-medium text-[#F8FAFC]">Slope Gradient (deg)</span>
           </label>
 
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -129,23 +129,23 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
               onChange={() => onToggleFeature("roughness_m")}
               className="rounded text-accent"
             />
-            <span className="font-medium">Surface Roughness (m)</span>
+            <span className="font-medium text-[#F8FAFC]">Surface Roughness (m)</span>
           </label>
         </div>
 
-        <p className="text-[11px] text-text-muted leading-normal pt-1 border-t border-border">
+        <p className="text-[11px] text-[#94A3B8] leading-normal pt-2 border-t border-[#243044]">
           Weights default equal. Weights are exploratory, not calibrated.
         </p>
       </Card>
 
       {/* 3. Search Thresholds & Execution */}
-      <Card className="space-y-3 bg-surface border-border p-4">
-        <span className="font-semibold text-text-primary block">3. Comparison Parameters</span>
+      <Card className="space-y-3 bg-[#111826] border border-[#243044] p-4 shadow-sm">
+        <span className="font-semibold text-[#F8FAFC] block">3. Comparison Parameters</span>
 
         <div>
           <div className="flex justify-between text-[11px] mb-1 font-mono">
-            <span className="text-text-muted">Min Similarity Threshold:</span>
-            <span className="text-accent">{similarityThreshold.toFixed(0)}%</span>
+            <span className="text-[#94A3B8]">Min Similarity Threshold:</span>
+            <span className="text-accent font-bold">{similarityThreshold.toFixed(0)}%</span>
           </div>
           <input
             type="range"
@@ -160,13 +160,13 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
 
         <div>
           <div className="flex justify-between text-[11px] mb-1 font-mono">
-            <span className="text-text-muted">Top Candidate Limit (k):</span>
-            <span className="text-text-primary">{topK}</span>
+            <span className="text-[#94A3B8]">Top Candidate Limit (k):</span>
+            <span className="text-[#F8FAFC] font-bold">{topK}</span>
           </div>
           <select
             value={topK}
             onChange={(e) => setTopK(Number(e.target.value))}
-            className="w-full bg-raised border border-border rounded px-2.5 py-1 text-xs text-text-primary font-mono"
+            className="w-full bg-[#162033] border border-[#243044] rounded px-2.5 py-1.5 text-xs text-[#F8FAFC] font-mono focus:border-[#38BDF8] focus:outline-none"
           >
             <option value={10}>Top 10 candidates</option>
             <option value={20}>Top 20 candidates</option>
@@ -180,7 +180,7 @@ export const RegionWorkflowControls: React.FC<RegionWorkflowControlsProps> = ({
             size="md"
             onClick={onRunAnalysis}
             disabled={isRunning || !selectedRegionId}
-            className="w-full font-medium"
+            className="w-full font-semibold py-2.5 shadow-sm"
           >
             {isRunning ? "Calculating..." : "Run terrain discovery"}
           </Button>
