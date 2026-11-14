@@ -11,15 +11,15 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const variantStyles = {
-    default: "bg-slate-900/80 backdrop-blur-md border-white/10 shadow-lg text-slate-100",
-    raised: "bg-slate-800/80 backdrop-blur-md border-white/10 shadow-lg text-slate-100",
+    default: "bg-surface border-border text-text-primary",
+    raised: "bg-raised border-border text-text-primary",
     interactive:
-      "bg-slate-900/80 backdrop-blur-md border-white/10 hover:border-sky-400 hover:shadow-glow transition-all cursor-pointer text-slate-100",
+      "bg-surface border-border hover:border-accent/60 transition-colors cursor-pointer text-text-primary",
   }[variant];
 
   return (
     <div
-      className={`rounded-xl border p-5 transition-colors ${variantStyles} ${className}`}
+      className={`rounded-card border p-5 ${variantStyles} ${className}`}
       {...props}
     >
       {children}
@@ -34,7 +34,7 @@ export const GlassPanel: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
 }) => {
   return (
     <div
-      className={`rounded-xl border border-white/10 bg-slate-900/75 backdrop-blur-xl shadow-2xl p-6 text-slate-100 ${className}`}
+      className={`rounded-card border border-border bg-surface p-6 text-text-primary ${className}`}
       {...props}
     >
       {children}

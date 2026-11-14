@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { SectionHeading } from "../components/ui";
+import { SectionHeading, EmptyState, LoadingSpinner, ErrorMessage } from "../components/ui";
 import { PlanetaryMap } from "../components/PlanetaryMap";
 import {
   api,
@@ -11,40 +11,58 @@ import {
   GazetteerItem,
 } from "../api/client";
 import {
-  DiscoveryFilters,
   CandidateTable,
   CandidateDetailPanel,
-  CandidateCompareModal,
-  TerrainCategory,
+  ImageWorkflowControls,
+  ImageMetadata,
+  RegionWorkflowControls,
+  ReferenceRegionViewer,
   filterCandidates,
   sortCandidates,
 } from "../components/discovery";
 
 export const Discovery: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentMode = searchParams.get("mode") === "region" ? "region" : "image";
   const queryPlanet = searchParams.get("planet");
   const queryRegionId = searchParams.get("regionId") ? Number(searchParams.get("regionId")) : null;
 
-  // Planetary & Region selections
+  // Mode selection: "image" or "region"
+  const handleModeChange = (newMode: "image" | "region") => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("mode", newMode);
+    setSearchParams(nextParams);
+  };
+
+  // Image mode state
+  const [imageMeta, setImageMeta] = useState<ImageMetadata>({
+    file: null,
+    previewUrl: null,
+    body: "Mars",
+    instrument: "",
+    resolutionMPerPx: 6.0,
+    lat: "",
+    lon: "",
+    acquisitionDate: "",
+    method: "embedding",
+    topK: 20,
+  });
+
+  // Region mode state
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [selectedPlanetName, setSelectedPlanetName] = useState<string>(queryPlanet || "Mars");
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedRegionId, setSelectedRegionId] = useState<number | null>(queryRegionId);
-
-  // Filter settings
-  const [terrainCategory, setTerrainCategory] = useState<TerrainCategory>("all");
   const [selectedFeatures, setSelectedFeatures] = useState<Record<string, boolean>>({
     elevation_relative: true,
     slope_deg: true,
     roughness_m: true,
   });
-  const [featureWeights, setFeatureWeights] = useState<Record<string, number>>({
-    elevation_relative: 0.333,
-    slope_deg: 0.333,
-    roughness_m: 0.334,
-  });
   const [similarityThreshold, setSimilarityThreshold] = useState<number>(0.0);
   const [topK, setTopK] = useState<number>(20);
+
+  // Center viewport toggle: "earth" (candidates) vs "reference" (Mars/Moon)
+  const [centerView, setCenterView] = useState<"earth" | "reference">("earth");
 
   // Execution & results state
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -52,15 +70,12 @@ export const Discovery: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisDetailResponse | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateMatch | null>(null);
 
-  // Sorting state for ranking table
+  // Sorting state for table
   const [sortField, setSortField] = useState<"similarity" | "confidence" | "rank">("similarity");
   const [sortAsc, setSortAsc] = useState<boolean>(false);
-
-  // Side-by-side comparison selection (2-3 items)
   const [selectedForCompare, setSelectedForCompare] = useState<number[]>([]);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
 
-  // 1. Load planets on mount
+  // 1. Load planets
   useEffect(() => {
     api.getPlanets()
       .then((data) => {
@@ -109,10 +124,6 @@ export const Discovery: React.FC = () => {
     setSelectedFeatures((prev) => ({ ...prev, [feat]: !prev[feat] }));
   };
 
-  const handleWeightChange = (feat: string, val: number) => {
-    setFeatureWeights((prev) => ({ ...prev, [feat]: val }));
-  };
-
   const handleSelectGazetteerFeature = async (item: GazetteerItem) => {
     try {
       let activeRegionId = item.region_id;
@@ -128,7 +139,7 @@ export const Discovery: React.FC = () => {
       }
       if (activeRegionId) {
         setSelectedRegionId(activeRegionId);
-        handleRunAnalysis(activeRegionId);
+        handleRunRegionAnalysis(activeRegionId);
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to activate gazetteer feature.");
@@ -137,7 +148,7 @@ export const Discovery: React.FC = () => {
     }
   };
 
-  const handleRunAnalysis = async (overrideRegionId?: number) => {
+  const handleRunRegionAnalysis = async (overrideRegionId?: number) => {
     const targetId = overrideRegionId || selectedRegionId;
     if (!targetId) return;
     setIsRunning(true);
@@ -154,7 +165,6 @@ export const Discovery: React.FC = () => {
       const runRes = await api.runAnalysis({
         target_region_id: targetId,
         features: activeFeatures,
-        weights: featureWeights,
         threshold: similarityThreshold,
         top_k: topK,
       });
@@ -162,6 +172,7 @@ export const Discovery: React.FC = () => {
       const fullAnalysis = await api.getAnalysisById(runRes.analysis_id);
       setAnalysisResult(fullAnalysis);
       setSelectedCandidate(fullAnalysis.candidates.length > 0 ? fullAnalysis.candidates[0] : null);
+      setCenterView("earth");
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to execute analysis.");
     } finally {
@@ -171,90 +182,148 @@ export const Discovery: React.FC = () => {
 
   const handleToggleCompare = (id: number) => {
     setSelectedForCompare((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : prev.length >= 3 ? [...prev.slice(1), id] : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
   const filteredCandidates = useMemo(() => {
     if (!analysisResult) return [];
-    return filterCandidates(analysisResult.candidates, similarityThreshold, terrainCategory);
-  }, [analysisResult, similarityThreshold, terrainCategory]);
+    return filterCandidates(analysisResult.candidates, similarityThreshold, "all");
+  }, [analysisResult, similarityThreshold]);
 
   const sortedCandidates = useMemo(() => {
     return sortCandidates(filteredCandidates, sortField, sortAsc);
   }, [filteredCandidates, sortField, sortAsc]);
 
+  const activeRegionObj = useMemo(() => {
+    return regions.find((r) => r.id === selectedRegionId) || null;
+  }, [regions, selectedRegionId]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
-      {/* Page Header */}
+    <div className="space-y-6">
+      {/* Page Header & Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <SectionHeading
-          kicker="Scientific Search"
+          kicker="Analog Intelligence"
           title="Planetary Analog Discovery"
-          subtitle="Discover and evaluate Earth sites sharing topographic relief, slope, and roughness distributions with extraterrestrial target regions."
+          subtitle="Upload orbital observations or select reference features to identify comparable Earth terrains."
         />
-        <div className="flex items-center space-x-2">
-          <span className="text-xs font-mono text-text-muted">
-            {analysisResult ? `Analysis Run #${analysisResult.id}` : "Ready"}
-          </span>
-          <span className="w-2 h-2 rounded-full bg-status-ok" />
+
+        {/* Mode Switch (Image vs Region) */}
+        <div className="inline-flex items-center p-1 rounded-btn bg-surface border border-border">
+          <button
+            type="button"
+            onClick={() => handleModeChange("image")}
+            className={`px-4 py-1.5 rounded text-xs font-sans font-medium transition-colors ${
+              currentMode === "image"
+                ? "bg-raised text-accent font-semibold border border-border"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+          >
+            Image Mode
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange("region")}
+            className={`px-4 py-1.5 rounded text-xs font-sans font-medium transition-colors ${
+              currentMode === "region"
+                ? "bg-raised text-accent font-semibold border border-border"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+          >
+            Region Mode
+          </button>
         </div>
       </div>
 
       {errorMessage && (
-        <div className="p-3 bg-status-danger/20 border border-status-danger/40 rounded-btn text-xs text-status-danger font-mono">
-          {errorMessage}
-        </div>
+        <ErrorMessage
+          message={errorMessage}
+          onRetry={() => setErrorMessage(null)}
+        />
       )}
 
-      {/* Main 3-Column Layout */}
+      {/* Main 3-Column Layout (Desktop) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Filter Sidebar */}
-        <DiscoveryFilters
-          planets={planets}
-          selectedPlanetName={selectedPlanetName}
-          setSelectedPlanetName={setSelectedPlanetName}
-          regions={regions}
-          selectedRegionId={selectedRegionId}
-          setSelectedRegionId={setSelectedRegionId}
-          terrainCategory={terrainCategory}
-          setTerrainCategory={setTerrainCategory}
-          selectedFeatures={selectedFeatures}
-          onToggleFeature={handleToggleFeature}
-          featureWeights={featureWeights}
-          onWeightChange={handleWeightChange}
-          similarityThreshold={similarityThreshold}
-          setSimilarityThreshold={setSimilarityThreshold}
-          topK={topK}
-          setTopK={setTopK}
-          isRunning={isRunning}
-          onRunAnalysis={handleRunAnalysis}
-          selectedForCompareCount={selectedForCompare.length}
-          onOpenCompareModal={() => setIsCompareModalOpen(true)}
-          onSelectGazetteerFeature={handleSelectGazetteerFeature}
-        />
+        {/* Left Controls (approx 320px -> 3 cols of 12) */}
+        <div className="lg:col-span-3">
+          {currentMode === "image" ? (
+            <ImageWorkflowControls
+              metadata={imageMeta}
+              setMetadata={setImageMeta}
+            />
+          ) : (
+            <RegionWorkflowControls
+              planets={planets}
+              selectedPlanetName={selectedPlanetName}
+              setSelectedPlanetName={setSelectedPlanetName}
+              regions={regions}
+              selectedRegionId={selectedRegionId}
+              setSelectedRegionId={setSelectedRegionId}
+              selectedFeatures={selectedFeatures}
+              onToggleFeature={handleToggleFeature}
+              similarityThreshold={similarityThreshold}
+              setSimilarityThreshold={setSimilarityThreshold}
+              topK={topK}
+              setTopK={setTopK}
+              isRunning={isRunning}
+              onRunAnalysis={() => handleRunRegionAnalysis()}
+              onSelectGazetteerFeature={handleSelectGazetteerFeature}
+            />
+          )}
+        </div>
 
-        {/* Center Map & Ranking Table Area */}
+        {/* Center Viewport: Candidates Map OR Reference Region (6 cols of 12) */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-heading font-bold text-text-primary">
-              Global Earth Candidates Viewport
-            </h3>
-            <span className="text-xs font-mono text-text-muted">
-              {filteredCandidates.length} Active Candidates
+          <div className="flex items-center justify-between pb-1">
+            {/* Viewport switch: Earth Candidates vs Target Region */}
+            <div className="inline-flex items-center p-0.5 rounded bg-surface border border-border text-xs font-sans">
+              <button
+                type="button"
+                onClick={() => setCenterView("earth")}
+                className={`px-3 py-1 rounded transition-colors ${
+                  centerView === "earth"
+                    ? "bg-raised text-accent font-medium border border-border"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Earth Candidates ({filteredCandidates.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCenterView("reference")}
+                className={`px-3 py-1 rounded transition-colors ${
+                  centerView === "reference"
+                    ? "bg-raised text-accent font-medium border border-border"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                Target {selectedPlanetName} Region
+              </button>
+            </div>
+
+            <span className="text-[11px] font-mono text-text-muted">
+              {centerView === "earth" ? "Global MapLibre View" : "Local Altimetry View"}
             </span>
           </div>
 
-          <PlanetaryMap
-            planet="earth"
-            candidates={filteredCandidates}
-            selectedCandidateId={selectedCandidate?.id || null}
-            onSelectCandidate={(cand) => setSelectedCandidate(cand)}
-            className="h-[420px]"
-          />
+          {/* Viewport content */}
+          {centerView === "earth" ? (
+            <PlanetaryMap
+              planet="earth"
+              candidates={filteredCandidates}
+              selectedCandidateId={selectedCandidate?.id || null}
+              onSelectCandidate={(cand) => setSelectedCandidate(cand)}
+              className="h-[440px]"
+            />
+          ) : (
+            <ReferenceRegionViewer
+              region={activeRegionObj}
+              planetName={selectedPlanetName}
+            />
+          )}
 
+          {/* Candidate Table below Map */}
           <CandidateTable
             candidates={sortedCandidates}
             selectedCandidate={selectedCandidate}
@@ -269,17 +338,34 @@ export const Discovery: React.FC = () => {
           />
         </div>
 
-        {/* Right Candidate Detail Panel */}
-        <CandidateDetailPanel selectedCandidate={selectedCandidate} />
+        {/* Right Column: Candidate Detail Panel (3 cols of 12) */}
+        <div className="lg:col-span-3">
+          {isRunning ? (
+            <div className="h-[400px] flex items-center justify-center bg-surface border border-border rounded-card">
+              <LoadingSpinner label="Running similarity comparison..." />
+            </div>
+          ) : !analysisResult && currentMode === "image" ? (
+            <EmptyState
+              title="No image analysis run yet"
+              description="Upload an orbital image and configure ground resolution to begin comparison."
+              reason="Visual texture backend is not implemented yet"
+            />
+          ) : !analysisResult ? (
+            <EmptyState
+              title="No analysis run yet"
+              description="Select a planetary target region and click 'Run terrain discovery'."
+            />
+          ) : (
+            <CandidateDetailPanel
+              selectedCandidate={selectedCandidate}
+              uploadedImageUrl={imageMeta.previewUrl}
+              uploadedResolutionMPerPx={imageMeta.resolutionMPerPx}
+            />
+          )}
+        </div>
       </div>
-
-      {/* Side-by-Side Comparison Modal */}
-      <CandidateCompareModal
-        isOpen={isCompareModalOpen}
-        onClose={() => setIsCompareModalOpen(false)}
-        selectedForCompare={selectedForCompare}
-        analysisResult={analysisResult}
-      />
     </div>
   );
 };
+
+export default Discovery;

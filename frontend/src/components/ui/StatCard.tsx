@@ -23,26 +23,26 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <Card className={`flex flex-col justify-between ${className}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs uppercase font-mono tracking-wider text-text-muted">
+        <span className="text-[11px] font-sans font-medium uppercase tracking-wider text-text-muted">
           {label}
         </span>
         {provenance && (
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-raised text-accent-cyan border border-border">
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-raised text-accent border border-border">
             {provenance}
           </span>
         )}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-2">
         {hasValue ? (
-          <div className="flex items-baseline space-x-1.5 font-mono">
-            <span className="text-2xl font-bold text-text-primary tracking-tight">
+          <div className="flex items-baseline space-x-1 font-mono">
+            <span className="text-xl font-semibold text-text-primary">
               {typeof value === "number" ? value.toLocaleString() : value}
             </span>
             {unit && <span className="text-xs text-text-muted">{unit}</span>}
           </div>
         ) : (
-          <div className="text-xs text-text-muted italic py-1">
+          <div className="text-xs text-text-muted py-1 font-sans">
             {emptyText}
           </div>
         )}
@@ -50,4 +50,3 @@ export const StatCard: React.FC<StatCardProps> = ({
     </Card>
   );
 };
-

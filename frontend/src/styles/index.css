@@ -3,119 +3,63 @@
 @tailwind utilities;
 
 :root {
-  --bg-page: #030712;
-  --bg-card: #0f172a;
-  --bg-panel: #0f172a;
-  --bg-raised: #1e293b;
-  --border: rgba(255, 255, 255, 0.12);
-  --text-primary: #F8FAFC;
+  --background: #0B0F17;
+  --surface: #111826;
+  --raised: #162033;
+  --border: #1E293B;
+  --text-primary: #E5E7EB;
   --text-muted: #94A3B8;
-  --accent-cyan: #38BDF8;
-  --accent-blue: #60A5FA;
+  --accent: #38BDF8;
   --status-ok: #34D399;
   --status-warn: #FBBF24;
-  --status-bad: #F87171;
+  --status-error: #F87171;
 }
 
 body {
   margin: 0;
-  background-color: #030712;
-  color: #F8FAFC;
+  background-color: #0B0F17;
+  color: #E5E7EB;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }
 
-/* Crisp high-contrast white & silver headings */
+/* Classic scholarly serif headings */
 h1, h2, h3, h4, h5, h6 {
-  color: #F8FAFC;
-  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  color: #E5E7EB;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
 }
 
-/* Global sleek dark space theme overrides for cards and boxes */
-.bg-panel {
-  background-color: #0f172a !important;
-  color: #F8FAFC !important;
+/* Base surface styling */
+.bg-surface {
+  background-color: #111826 !important;
 }
 
 .bg-raised {
-  background-color: #1e293b !important;
-  color: #F8FAFC !important;
+  background-color: #162033 !important;
 }
 
 .border-border {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-/* High contrast white and silver text */
-.text-text-primary {
-  color: #F8FAFC !important;
-}
-
-.text-text-muted {
-  color: #94A3B8 !important;
+  border-color: #1E293B !important;
 }
 
 /* Table default dark backgrounds */
 table {
-  background-color: #0f172a;
-  color: #F8FAFC;
+  background-color: #111826;
+  color: #E5E7EB;
 }
 
-/* Form inputs & dropdowns styling in dark space mode */
+/* Form inputs & dropdowns styling in restrained dark mode */
 input, select, textarea {
-  color: #F8FAFC !important;
-  background-color: #0F172A !important;
-  border-color: #334155 !important;
+  color: #E5E7EB !important;
+  background-color: #111826 !important;
+  border-color: #1E293B !important;
+  border-radius: 6px;
 }
 
 input::placeholder, textarea::placeholder {
   color: #64748B !important;
-}
-
-/* Cinematic Deep Space Starfield Background */
-.starfield-bg {
-  background-color: #030712;
-  background-image: 
-    radial-gradient(1px 1px at 25px 35px, #ffffff, transparent),
-    radial-gradient(1.5px 1.5px at 150px 80px, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 90px 220px, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(2px 2px at 280px 140px, rgba(147, 197, 253, 0.95), transparent),
-    radial-gradient(1.2px 1.2px at 320px 300px, rgba(255, 255, 255, 0.75), transparent),
-    radial-gradient(1px 1px at 450px 190px, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(2px 2px at 580px 80px, rgba(56, 189, 248, 0.85), transparent),
-    radial-gradient(1px 1px at 700px 260px, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 850px 120px, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 950px 350px, rgba(255, 255, 255, 0.5), transparent);
-  background-repeat: repeat;
-  background-size: 1000px 500px;
-}
-
-/* Smooth planetary float animation */
-@keyframes planetFloatSlow {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1deg);
-  }
-}
-
-@keyframes planetFloatMedium {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-12px) rotate(-1.5deg);
-  }
-}
-
-.animate-float-slow {
-  animation: planetFloatSlow 8s ease-in-out infinite;
-}
-
-.animate-float-medium {
-  animation: planetFloatMedium 6s ease-in-out infinite;
 }
 
 /* Respect user's motion preference */
@@ -126,58 +70,54 @@ input::placeholder, textarea::placeholder {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .animate-float-slow, .animate-float-medium {
-    animation: none !important;
-  }
 }
 
-/* Sleek modern dark scrollbar */
+/* Clean, restrained dark scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d1a;
+  background: #0B0F17;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1E293B;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
 
-/* Sleek MapLibre GL Dark Space Popups */
+/* MapLibre GL restrained popups */
 .maplibregl-popup-content {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8) !important;
+  background-color: #111826 !important;
+  color: #E5E7EB !important;
+  border: 1px solid #1E293B !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
   padding: 8px 12px !important;
 }
 
 .maplibregl-popup-anchor-top .maplibregl-popup-tip {
-  border-bottom-color: #0f172a !important;
+  border-bottom-color: #111826 !important;
 }
 
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-  border-top-color: #0f172a !important;
+  border-top-color: #111826 !important;
 }
 
 .maplibregl-popup-anchor-left .maplibregl-popup-tip {
-  border-right-color: #0f172a !important;
+  border-right-color: #111826 !important;
 }
 
 .maplibregl-popup-anchor-right .maplibregl-popup-tip {
-  border-left-color: #0f172a !important;
+  border-left-color: #111826 !important;
 }
 
-/* Accessibility: Consistent focus rings */
+/* Accessibility: Consistent visible focus rings */
 :focus-visible {
   outline: 2px solid #38BDF8;
   outline-offset: 2px;

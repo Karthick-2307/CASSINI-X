@@ -18,21 +18,20 @@ export const SectionHeading: React.FC<SectionHeadingProps> = ({
   const alignment = align === "center" ? "text-center items-center" : "text-left items-start";
 
   return (
-    <div className={`flex flex-col space-y-2 ${alignment} ${className}`}>
+    <div className={`flex flex-col space-y-1.5 ${alignment} ${className}`}>
       {kicker && (
-        <span className="text-xs font-mono font-semibold tracking-widest text-sky-400 uppercase px-2.5 py-0.5 rounded-full bg-sky-950/60 border border-sky-500/30 inline-block shadow-sm">
+        <span className="text-[12px] font-sans font-medium uppercase tracking-wider text-text-muted">
           {kicker}
         </span>
       )}
-      <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight">
+      <h2 className="text-2xl sm:text-3xl font-heading font-semibold text-text-primary tracking-normal">
         {title}
       </h2>
       {subtitle && (
-        <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
+        <p className="text-sm text-text-muted max-w-2xl leading-relaxed">
           {subtitle}
         </p>
       )}
     </div>
   );
 };
-

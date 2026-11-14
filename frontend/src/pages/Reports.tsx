@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   SectionHeading,
   Card,
-  Badge,
   Button,
   LoadingSpinner,
   EmptyState,
+  ErrorMessage,
 } from "../components/ui";
 import {
   api,
@@ -17,13 +18,12 @@ export const Reports: React.FC = () => {
   const [analyses, setAnalyses] = useState<AnalysisSummaryItem[]>([]);
   const [reports, setReports] = useState<ReportItemResponse[]>([]);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<number | null>(null);
-  const [reportTitle, setReportTitle] = useState<string>("ASTRA-X Terrestrial Analog Scientific Dossier");
+  const [reportTitle, setReportTitle] = useState<string>("ASTRA-X Terrestrial Analog Dossier");
   const [loading, setLoading] = useState<boolean>(true);
   const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Initial load
   useEffect(() => {
     async function init() {
       try {
@@ -38,7 +38,7 @@ export const Reports: React.FC = () => {
           setSelectedAnalysisId(anList[0].id);
         }
       } catch (err: unknown) {
-        console.error("Reports page load error:", err);
+        setError(err instanceof Error ? err.message : "Failed to load reports.");
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,7 @@ export const Reports: React.FC = () => {
       });
 
       setReports((prev) => [newReport, ...prev]);
-      setSuccessMsg(`Report generated successfully: ${newReport.title} (${(newReport.file_size_bytes / 1024).toFixed(1)} KB)`);
+      setSuccessMsg(`Report generated: ${newReport.title} (${(newReport.file_size_bytes / 1024).toFixed(1)} KB)`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to compile PDF report.");
     } finally {
@@ -76,38 +76,39 @@ export const Reports: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 py-4">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+      <div className="pb-4 border-b border-border">
         <SectionHeading
-          kicker="Documentation & Export"
-          title="Scientific Reports & Mission Dossiers"
-          subtitle="Generate and download publication-ready scientific analog reports with ReportLab + Matplotlib charts, strict provenance, and disclaimers."
+          kicker="Documentation"
+          title="Scientific reports"
+          subtitle="Generate and download publication-ready analog dossiers with complete feature attribution and provenance."
         />
-        <div className="flex items-center space-x-2">
-          <Badge variant="ok">Part 7 Active</Badge>
-          <Badge variant="neutral">ReportLab PDF</Badge>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Report Configuration Form */}
-        <Card className="lg:col-span-5 space-y-5 border-slate-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide">
-              Compile Scientific Dossier
-            </h3>
-            <Badge variant="ok">Live Generator</Badge>
-          </div>
+      {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
 
-          <form onSubmit={handleGenerate} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-text-muted">Target Analysis Run</label>
+      {successMsg && (
+        <div className="p-3 bg-raised border border-status-ok/40 rounded-btn text-xs text-status-ok font-mono">
+          {successMsg}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left: Compile Report Form */}
+        <Card className="lg:col-span-5 space-y-4 bg-surface border-border p-6">
+          <h3 className="text-base font-heading font-semibold text-text-primary">
+            Compile new dossier
+          </h3>
+
+          <form onSubmit={handleGenerate} className="space-y-4 text-xs font-sans">
+            <div>
+              <label className="block text-text-muted mb-1">Source Analysis Run</label>
               {analyses.length > 0 ? (
                 <select
                   value={selectedAnalysisId || ""}
                   onChange={(e) => setSelectedAnalysisId(Number(e.target.value))}
-                  className="w-full bg-raised border border-border rounded-btn px-3 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-accent-cyan"
+                  className="w-full bg-raised border border-border rounded px-3 py-2 text-xs text-text-primary font-mono"
                 >
                   {analyses.map((an) => (
                     <option key={an.id} value={an.id}>
@@ -116,139 +117,83 @@ export const Reports: React.FC = () => {
                   ))}
                 </select>
               ) : (
-                <div className="text-xs font-mono text-status-warn p-2 bg-raised rounded border border-border">
-                  No similarity analyses run yet. Run an analysis from the Discovery / Analysis page first.
+                <div className="p-3 rounded bg-raised border border-border text-text-muted">
+                  No analyses run yet.{" "}
+                  <Link to="/discovery" className="text-accent underline">
+                    Run an analysis first
+                  </Link>
+                  .
                 </div>
               )}
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-text-muted">Dossier Title</label>
+            <div>
+              <label className="block text-text-muted mb-1">Report Title</label>
               <input
                 type="text"
                 value={reportTitle}
                 onChange={(e) => setReportTitle(e.target.value)}
-                placeholder="ASTRA-X Terrestrial Analog Scientific Dossier"
-                className="w-full bg-raised border border-border rounded-btn px-3 py-2 text-xs font-sans text-text-primary focus:outline-none focus:border-accent-cyan"
+                placeholder="ASTRA-X Terrestrial Analog Dossier"
+                className="w-full bg-raised border border-border rounded px-3 py-2 text-xs text-text-primary font-sans"
               />
             </div>
 
-            {/* Included PDF Sections Overview */}
-            <div className="space-y-2 text-xs font-mono pt-1">
-              <label className="text-text-muted">Standard Dossier Structure (ReportLab):</label>
-              <div className="p-3 bg-raised border border-border rounded-panel space-y-1 text-text-muted text-[11px]">
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Title Page (CASSIN X, ASTRA-X, Generation Timestamp)</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Planetary Target Region Physical Parameters</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Ranked Terrestrial Candidates (Similarity, Confidence, Suitability)</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Feature-Level Dimensional Comparison Table</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Embedded Matplotlib Elevation Profile & Feature Distribution Chart</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Dataset Provenance Table (Resolution, Sensor, Licence, Version)</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-accent-cyan font-bold">•</span>
-                  <span>Uncertainty, Limitations, and Part 0 Mandatory Disclaimers</span>
-                </div>
-              </div>
+            <div className="p-3 rounded bg-raised border border-border text-[11px] text-text-muted leading-relaxed">
+              Included sections: Target telemetry, candidate ranking, feature contribution charts, confidence breakdown, and dataset citations.
             </div>
 
-            {error && (
-              <p className="text-xs font-mono text-status-danger p-2 bg-rose-950/20 border border-rose-900 rounded">
-                {error}
-              </p>
-            )}
-
-            {successMsg && (
-              <p className="text-xs font-mono text-status-success p-2 bg-emerald-950/20 border border-emerald-900 rounded">
-                {successMsg}
-              </p>
-            )}
-
             <Button
-              type="submit"
               variant="primary"
               size="md"
-              disabled={generating || !selectedAnalysisId}
-              className="w-full"
+              disabled={generating || analyses.length === 0}
+              className="w-full font-medium"
             >
-              {generating ? "Compiling PDF Dossier..." : "Generate PDF Dossier"}
+              {generating ? "Compiling PDF..." : "Generate PDF report"}
             </Button>
           </form>
         </Card>
 
-        {/* Right: Generated Reports Archive */}
+        {/* Right: List of Generated Reports */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide">
-              Generated Reports Archive
-            </h3>
-            <Badge variant="neutral">{reports.length} Dossier{reports.length === 1 ? "" : "s"}</Badge>
-          </div>
+          <h3 className="text-base font-heading font-semibold text-text-primary">
+            Generated reports ({reports.length})
+          </h3>
 
           {loading ? (
-            <div className="py-12 flex justify-center">
-              <LoadingSpinner size="md" />
-            </div>
+            <LoadingSpinner label="Loading report history..." />
           ) : reports.length === 0 ? (
             <EmptyState
-              title="No Reports Generated Yet"
-              description="Generated PDF dossiers will be indexed here with direct download links, timestamps, target analyses, and exact file sizes."
-              reason="Configure an analysis run on the left and click 'Generate PDF Dossier'."
+              title="No reports compiled yet"
+              description="Compile a PDF dossier using the form on the left or export directly from candidate details in Discovery."
             />
           ) : (
             <div className="space-y-3">
               {reports.map((rep) => (
                 <Card
                   key={rep.id}
-                  className="p-4 bg-slate-900/80 border-white/10 hover:border-sky-400 shadow-lg transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-slate-100"
+                  className="bg-surface border-border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-mono font-bold text-sky-400">
-                        Dossier #{rep.id}
-                      </span>
-                      <Badge variant="ok">PDF</Badge>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        Analysis #{rep.analysis_id}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-heading font-bold text-white">
+                    <h4 className="font-heading font-semibold text-text-primary text-sm">
                       {rep.title}
                     </h4>
-                    <div className="text-[11px] font-mono text-slate-400 flex items-center space-x-3">
-                      <span>Created: {new Date(rep.created_at).toLocaleString()}</span>
-                      <span>Size: {formatFileSize(rep.file_size_bytes)}</span>
+                    <div className="flex items-center space-x-3 text-xs font-mono text-text-muted">
+                      <span>Analysis #{rep.analysis_id}</span>
+                      <span>•</span>
+                      <span>{new Date(rep.created_at).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{formatFileSize(rep.file_size_bytes)}</span>
                     </div>
                   </div>
 
-                  <div className="shrink-0">
-                    <a
-                      href={api.getReportDownloadUrl(rep.id)}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="secondary" size="sm">
-                        Download PDF
-                      </Button>
-                    </a>
-                  </div>
+                  <a
+                    href={api.getReportDownloadUrl(rep.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center py-1.5 px-3 rounded-btn bg-raised border border-border text-xs font-sans text-accent hover:border-accent/60 transition-colors shrink-0"
+                  >
+                    Download PDF ↓
+                  </a>
                 </Card>
               ))}
             </div>
@@ -258,3 +203,5 @@ export const Reports: React.FC = () => {
     </div>
   );
 };
+
+export default Reports;
