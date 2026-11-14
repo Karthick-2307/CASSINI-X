@@ -97,6 +97,14 @@ export interface AnalysisDetailResponse {
       noise_count: number;
     };
   };
+  visual_search_info?: {
+    engine?: string;
+    terrain_class?: string;
+    scanned_regions_count?: number;
+    continents_covered?: string[];
+    google_lens_url?: string;
+    status?: string;
+  };
   created_at: string;
   completed_at?: string;
   candidate_count: number;

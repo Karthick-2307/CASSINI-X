@@ -72,6 +72,7 @@ class AnalysisDetailResponse(BaseModel):
     scaler_params: Optional[Dict[str, Any]] = None
     target_summary: Optional[Dict[str, Any]] = None
     clustering_info: Optional[Dict[str, Any]] = None
+    visual_search_info: Optional[Dict[str, Any]] = None
     created_at: str
     completed_at: Optional[str] = None
     candidate_count: int

@@ -271,6 +271,7 @@ export const Discovery: React.FC = () => {
         onSelectCandidate={(cand) => setSelectedCandidate(cand)}
         targetRegionName={activeRegionObj?.name || `${selectedPlanetName} Terrain`}
         uploadedImageUrl={uploadedImageUrl}
+        visualSearchInfo={analysisResult?.visual_search_info}
       />
     </div>
   );

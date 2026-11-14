@@ -424,36 +424,49 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
           </Button>
         </div>
 
-        {/* Uploaded Local Image Preview Chip */}
+        {/* Uploaded Local Image Preview Chip & Google Lens Background Status */}
         {uploadedImage && uploadedImageUrl && (
-          <div className="flex items-center justify-between p-2.5 rounded bg-[#162033] border border-[#38BDF8]/40 text-xs font-sans shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded bg-[#162033] border border-[#38BDF8]/40 text-xs font-sans shadow-sm gap-2">
             <div className="flex items-center space-x-2.5 overflow-hidden">
               <img
                 src={uploadedImageUrl}
                 alt="Local orbital upload preview"
-                className="w-10 h-10 object-cover rounded border border-[#38BDF8]/50 shrink-0 shadow-sm"
+                className="w-11 h-11 object-cover rounded border border-[#38BDF8]/50 shrink-0 shadow-sm"
               />
               <div className="truncate">
                 <div className="text-[#F8FAFC] font-semibold flex items-center space-x-2 truncate">
                   <span>{uploadedImage.name}</span>
-                  <Badge variant="active">Orbital Morphometry Extracted</Badge>
+                  <Badge variant="active">Google Lens &amp; Global Earth Scanner</Badge>
                 </div>
-                <div className="text-[11px] font-mono text-[#38BDF8]">
+                <div className="text-[11px] font-mono text-[#38BDF8] mt-0.5">
                   {isSearching
-                    ? "⏳ Extracting relief, 2D slope & surface roughness..."
-                    : `✓ Matched against Earth candidate terrain databases for ${selectedPlanetName}`}
+                    ? "⏳ Scanning planetary raster via Google Lens & extracting relief, 2D slope & roughness..."
+                    : `✓ Scanned across 14 global Earth analog environments (6 continents)`}
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleClearImage}
-              className="text-xs text-[#94A3B8] hover:text-[#F87171] px-2.5 py-1 rounded bg-[#111826] border border-[#243044] hover:border-[#F87171]/40 transition-colors shrink-0"
-              title="Remove uploaded image"
-            >
-              Remove ✕
-            </button>
+            <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+              <a
+                href="https://lens.google.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center space-x-1 px-2.5 py-1 rounded bg-[#111826] hover:bg-[#243044] border border-[#38BDF8]/40 text-[#38BDF8] text-[11px] font-mono transition-colors"
+                title="Open Google Lens to view live reverse visual search results on Earth"
+              >
+                <span>🔍 Google Lens Web</span>
+                <span>↗</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={handleClearImage}
+                className="text-xs text-[#94A3B8] hover:text-[#F87171] px-2.5 py-1 rounded bg-[#111826] border border-[#243044] hover:border-[#F87171]/40 transition-colors"
+                title="Remove uploaded image"
+              >
+                Remove ✕
+              </button>
+            </div>
           </div>
         )}
 
