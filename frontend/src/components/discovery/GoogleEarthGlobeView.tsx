@@ -23,28 +23,28 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
-  const isSpinningRef = useRef<boolean>(true);
+  const isSpinningRef = useRef<boolean>(false);
   const animFrameIdRef = useRef<number | null>(null);
 
-  const [isSpinning, setIsSpinning] = useState<boolean>(true);
+  const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [currentBasemap, setCurrentBasemap] = useState<string>("google-satellite");
   const [showPopupCard, setShowPopupCard] = useState<boolean>(true);
 
-  // Initialize MapLibre GL map
+  // 1. Initialize MapLibre GL map
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     const initialCenter: [number, number] = selectedCandidate
       ? [selectedCandidate.lon, selectedCandidate.lat]
-      : [-20.0, 20.0];
-    const initialZoom = selectedCandidate ? 7.5 : 2.5;
+      : [-69.5, -24.0];
+    const initialZoom = selectedCandidate ? 6.5 : 2.5;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: getBasemapStyle("earth", currentBasemap),
       center: initialCenter,
       zoom: initialZoom,
-      pitch: 25,
+      pitch: 30,
       bearing: 0,
     });
 
@@ -53,7 +53,7 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
 
     mapRef.current = map;
 
-    // Continuous idle spin animation loop ("Google Earth spin normal")
+    // Spin animation loop (only runs when isSpinningRef.current is true)
     const spinLoop = () => {
       if (isSpinningRef.current && mapRef.current) {
         const center = mapRef.current.getCenter();
@@ -65,7 +65,7 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
 
     animFrameIdRef.current = requestAnimationFrame(spinLoop);
 
-    // Stop rotation when user manually drags or interacts
+    // Stop rotation when user manually interacts with map
     const stopSpinOnUserGesture = () => {
       isSpinningRef.current = false;
       setIsSpinning(false);
@@ -89,7 +89,7 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
     }
   };
 
-  // Toggle Spin
+  // Toggle Spin manually
   const toggleSpin = () => {
     const nextState = !isSpinning;
     isSpinningRef.current = nextState;
@@ -101,14 +101,14 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
     const map = mapRef.current;
     if (!map || !selectedCandidate) return;
 
-    // Stop idle spin when flying to a specific candidate
+    // Disable auto-rotation when focusing a candidate site
     isSpinningRef.current = false;
     setIsSpinning(false);
     setShowPopupCard(true);
 
     map.flyTo({
       center: [selectedCandidate.lon, selectedCandidate.lat],
-      zoom: 8.5,
+      zoom: 7.5,
       speed: 1.2,
       curve: 1.4,
       pitch: 35,
@@ -116,37 +116,108 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
     });
   }, [selectedCandidate]);
 
-  // Update Candidate Markers
+  // Update Candidate Markers (Replace generic dots with sleek aerospace target pins)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove old markers
+    // Clear previous markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
     if (candidates.length === 0) return;
 
+    // Group candidates by base location name to avoid clustering identical sectors
+    const uniqueSites: CandidateMatch[] = [];
+    const seenNames = new Set<string>();
+
     candidates.forEach((cand) => {
-      const isSelected = selectedCandidate?.id === cand.id;
+      // Normalize base location name (e.g., strip "(Sector 2)")
+      const baseName = cand.location_name.replace(/\s*\(Sector \d+\)/i, "").trim();
+      if (!seenNames.has(baseName)) {
+        seenNames.add(baseName);
+        uniqueSites.push(cand);
+      }
+    });
+
+    // Render high-tech aerospace analog pins
+    uniqueSites.forEach((cand, index) => {
+      const isSelected = selectedCandidate?.id === cand.id || 
+        selectedCandidate?.location_name.replace(/\s*\(Sector \d+\)/i, "").trim() === 
+        cand.location_name.replace(/\s*\(Sector \d+\)/i, "").trim();
+
+      const rankNumber = index + 1;
+
+      let accentColor = "#38BDF8";
+      let badgeBg = "rgba(56, 189, 248, 0.15)";
+      let borderColor = "rgba(56, 189, 248, 0.8)";
+      if (cand.similarity >= 85) {
+        accentColor = "#34D399";
+        badgeBg = "rgba(52, 211, 153, 0.15)";
+        borderColor = "rgba(52, 211, 153, 0.8)";
+      } else if (cand.similarity >= 70) {
+        accentColor = "#38BDF8";
+        badgeBg = "rgba(56, 189, 248, 0.15)";
+        borderColor = "rgba(56, 189, 248, 0.8)";
+      } else if (cand.similarity >= 50) {
+        accentColor = "#FBBF24";
+        badgeBg = "rgba(251, 191, 36, 0.15)";
+        borderColor = "rgba(251, 191, 36, 0.8)";
+      } else {
+        accentColor = "#F87171";
+        badgeBg = "rgba(248, 113, 113, 0.15)";
+        borderColor = "rgba(248, 113, 113, 0.8)";
+      }
+
+      // Create outer container element
       const el = document.createElement("div");
+      el.className = "cursor-pointer select-none transition-transform duration-200";
+      el.style.transformOrigin = "bottom center";
 
-      let pinColor = "#38BDF8";
-      if (cand.similarity >= 85) pinColor = "#34D399";
-      else if (cand.similarity >= 70) pinColor = "#38BDF8";
-      else if (cand.similarity >= 50) pinColor = "#FBBF24";
-      else pinColor = "#F87171";
+      // Build sleek target badge with site name & rank (no plain round dot!)
+      const baseNameShort = cand.location_name
+        .replace(/\s*\(Sector \d+\)/i, "")
+        .replace("Impact Structure", "")
+        .replace("Volcanic Field", "")
+        .trim();
 
-      el.className = `w-4 h-4 rounded-full border-2 border-white cursor-pointer transition-transform duration-200 shadow-md flex items-center justify-center ${
-        isSelected ? "scale-150 z-30 ring-4 ring-[#38BDF8]" : "z-20 hover:scale-125"
-      }`;
-      el.style.backgroundColor = pinColor;
+      el.innerHTML = `
+        <div class="flex flex-col items-center group">
+          <!-- Floating Label Pill -->
+          <div style="background-color: #0B0F17; border: 1px solid ${borderColor}; color: #F8FAFC;"
+               class="px-2 py-0.5 rounded-full text-[10px] font-mono whitespace-nowrap shadow-xl flex items-center space-x-1.5 mb-1 ${
+                 isSelected ? "ring-2 ring-sky-400" : "opacity-90 group-hover:opacity-100"
+               }">
+            <span style="color: ${accentColor}; font-weight: 700;">#${rankNumber}</span>
+            <span class="font-sans font-medium">${baseNameShort}</span>
+            <span style="color: ${accentColor}; font-weight: 600;">${cand.similarity.toFixed(0)}%</span>
+          </div>
+
+          <!-- Aerospace Target Pin -->
+          <div class="relative flex items-center justify-center">
+            ${
+              isSelected
+                ? `<div style="border-color: ${accentColor};" class="absolute -inset-2 rounded-full border-2 animate-ping opacity-60"></div>`
+                : ""
+            }
+            <div style="background: ${badgeBg}; border: 2px solid ${accentColor};"
+                 class="w-6 h-6 rounded-md rotate-45 flex items-center justify-center shadow-lg transition-transform ${
+                   isSelected ? "scale-110" : "group-hover:scale-110"
+                 }">
+              <div style="background-color: ${accentColor};" class="w-2 h-2 rounded-sm"></div>
+            </div>
+          </div>
+        </div>
+      `;
 
       el.addEventListener("click", () => {
         onSelectCandidate(cand);
       });
 
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({
+        element: el,
+        anchor: "bottom",
+      })
         .setLngLat([cand.lon, cand.lat])
         .addTo(map);
 
@@ -256,15 +327,15 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
             Similarity Scale
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#34D399]" />
+            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#34D399] bg-[#34D399]/30" />
             <span className="text-[#E5E7EB]">&ge; 85% High Match</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#38BDF8]" />
+            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#38BDF8] bg-[#38BDF8]/30" />
             <span className="text-[#E5E7EB]">70% – 85% Strong Match</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FBBF24]" />
+            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#FBBF24] bg-[#FBBF24]/30" />
             <span className="text-[#E5E7EB]">50% – 70% Moderate</span>
           </div>
         </div>
