@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-14T08:40:56.933332+00:00",
+  "timestamp": "2026-11-14T16:51:24.858726+00:00",
   "model_name": "Weighted Euclidean Similarity (Robust Scaling)",
   "features": [
     "elevation_relative",
@@ -8,15 +8,28 @@
   ],
   "benchmark_evaluations": [
     {
+      "benchmark_name": "Devon Island (Haughton Crater)",
+      "target_region": "Jezero Crater Floor & Delta",
+      "analog_region": "Haughton Impact Structure (Devon Island)",
+      "pool_size": 4137,
+      "model_best_rank": 2,
+      "slope_best_rank": 1,
+      "expected_random_rank": 2069.0,
+      "model_similarity": 95.68,
+      "slope_similarity": 100.0,
+      "model_beats_slope": false,
+      "model_beats_random": true
+    },
+    {
       "benchmark_name": "Lanzarote Volcanic Field (Canaries)",
       "target_region": "Mare Tranquillitatis (Apollo 11 Basin)",
       "analog_region": "Lanzarote Volcanic Field",
-      "pool_size": 2288,
-      "model_best_rank": 4,
-      "slope_best_rank": 16,
-      "expected_random_rank": 1144.5,
-      "model_similarity": 95.64,
-      "slope_similarity": 99.51,
+      "pool_size": 4137,
+      "model_best_rank": 16,
+      "slope_best_rank": 28,
+      "expected_random_rank": 2069.0,
+      "model_similarity": 93.49,
+      "slope_similarity": 99.47,
       "model_beats_slope": true,
       "model_beats_random": true
     },
@@ -24,42 +37,42 @@
       "benchmark_name": "Mauna Kea & Mauna Loa",
       "target_region": "Mare Tranquillitatis (Apollo 11 Basin)",
       "analog_region": "Mauna Kea & Kilauea Flanks",
-      "pool_size": 2288,
-      "model_best_rank": 2029,
-      "slope_best_rank": 2124,
-      "expected_random_rank": 1144.5,
-      "model_similarity": 12.49,
-      "slope_similarity": 2.77,
+      "pool_size": 4137,
+      "model_best_rank": 3782,
+      "slope_best_rank": 3973,
+      "expected_random_rank": 2069.0,
+      "model_similarity": 10.55,
+      "slope_similarity": 2.06,
       "model_beats_slope": true,
       "model_beats_random": false
     }
   ],
   "metrics_summary": {
     "model": {
-      "count": 2,
-      "mean_rank": 1016.5,
-      "median_rank": 1016.5,
-      "mrr": 0.1252,
+      "count": 3,
+      "mean_rank": 1266.67,
+      "median_rank": 16.0,
+      "mrr": 0.1876,
       "hit_rates": {
         "hit_at_1": 0.0,
-        "hit_at_5": 0.5,
-        "hit_at_10": 0.5,
-        "hit_at_20": 0.5
+        "hit_at_5": 0.3333,
+        "hit_at_10": 0.3333,
+        "hit_at_20": 0.6667
       }
     },
     "baseline_slope": {
-      "count": 2,
-      "mean_rank": 1070.0,
-      "median_rank": 1070.0,
-      "mrr": 0.0315,
+      "count": 3,
+      "mean_rank": 1334.0,
+      "median_rank": 28.0,
+      "mrr": 0.3453,
       "hit_rates": {
-        "hit_at_1": 0.0,
-        "hit_at_5": 0.0,
-        "hit_at_10": 0.0,
-        "hit_at_20": 0.5
+        "hit_at_1": 0.3333,
+        "hit_at_5": 0.3333,
+        "hit_at_10": 0.3333,
+        "hit_at_20": 0.3333
       }
     },
-    "baseline_random_expected_rank": 1144.5
+    "baseline_random_expected_rank": 2069.0
   },
-  "statistical_power_note": "Validation performed across 2 active benchmark pairings with 2288 candidate cells. Statistical power is limited given the small number of ingested terrestrial benchmark regions. More benchmark analog regions (Atacama, Devon Island, Hawaii) will be ingested in subsequent data expansions."
+  "statistical_power_note": "Validation performed across 3 active benchmark pairings with 4137 candidate cells. Statistical power is limited given the small number of ingested terrestrial benchmark regions. More benchmark analog regions (Atacama, Devon Island, Hawaii) will be ingested in subsequent data expansions."
 }

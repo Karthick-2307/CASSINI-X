@@ -91,6 +91,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+  searchByImage: (req: { image_base64: string; filename?: string; target_body?: string; ground_resolution_m?: number }) =>
+    apiClient<AnalysisDetailResponse>("/api/analysis/search-by-image", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
   getAnalogs: (params?: { planet?: string; area?: string; min_similarity?: number; limit?: number }) => {
     const q = new URLSearchParams();
     if (params?.planet) q.append("planet", params.planet);

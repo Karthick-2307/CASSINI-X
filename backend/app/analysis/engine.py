@@ -178,7 +178,32 @@ def run_analysis_pipeline(
     sorted_order = np.argsort(similarities[qualifying_indices])[::-1]
     ranked_indices = qualifying_indices[sorted_order]
 
-    actual_top_k = ranked_indices[:top_k]
+    # Group candidate cells by Earth region for round-robin diversity
+    from collections import defaultdict
+    region_buckets: Dict[int, List[int]] = defaultdict(list)
+    for idx in ranked_indices:
+        cell = cand_valid_cells[idx]
+        region_buckets[cell.region_id].append(idx)
+
+    # Order regions by the peak similarity score of their best matching cell
+    sorted_regions = sorted(
+        region_buckets.keys(),
+        key=lambda r_id: similarities[region_buckets[r_id][0]],
+        reverse=True
+    )
+
+    # Interleave candidates across distinct Earth regions so every location is represented
+    actual_top_k: List[int] = []
+    round_idx = 0
+    max_rounds = max((len(b) for b in region_buckets.values()), default=0)
+    while len(actual_top_k) < top_k and round_idx < max_rounds:
+        for r_id in sorted_regions:
+            bucket = region_buckets[r_id]
+            if round_idx < len(bucket):
+                actual_top_k.append(bucket[round_idx])
+                if len(actual_top_k) >= top_k:
+                    break
+        round_idx += 1
 
     # Target resolution for confidence scoring
     target_res = (
@@ -193,12 +218,21 @@ def run_analysis_pipeline(
         for i, f in enumerate(feature_names)
     ]))
 
+    # Track region counts for clear sub-sector location display
+    region_cand_counts: Dict[int, int] = {}
+
     # Generate CandidateMatch records
     matches: List[CandidateMatch] = []
     for cand_idx in actual_top_k:
         c_cell = cand_valid_cells[cand_idx]
         sim_score = round(float(similarities[cand_idx]), 2)
         dist_score = round(float(distances[cand_idx]), 4)
+
+        reg_name = c_cell.region.name if c_cell.region else "Earth Analog Location"
+        reg_id = c_cell.region_id
+        region_cand_counts[reg_id] = region_cand_counts.get(reg_id, 0) + 1
+        count_num = region_cand_counts[reg_id]
+        loc_display = reg_name if count_num == 1 else f"{reg_name} (Sector {count_num})"
 
         # Confidence calculation
         e_res = (
@@ -236,15 +270,23 @@ def run_analysis_pipeline(
         cluster_id = kmeans_info["labels"][cand_idx]
         anomaly_flag = bool(is_anomaly_mask[cand_idx])
 
-        cell_lat = c_cell.lat if c_cell.lat is not None else (c_cell.region.lat if c_cell.region else 0.0)
-        cell_lon = c_cell.lon if c_cell.lon is not None else (c_cell.region.lon if c_cell.region else 0.0)
+        base_lat = c_cell.lat if c_cell.lat is not None else (c_cell.region.lat if c_cell.region else 0.0)
+        base_lon = c_cell.lon if c_cell.lon is not None else (c_cell.region.lon if c_cell.region else 0.0)
+        if c_cell.lat is None and count_num > 1:
+            offset_lat = ((count_num % 3) - 1) * 0.03
+            offset_lon = (((count_num // 3) % 3) - 1) * 0.03
+            cell_lat = base_lat + offset_lat
+            cell_lon = base_lon + offset_lon
+        else:
+            cell_lat = base_lat
+            cell_lon = base_lon
 
         match = CandidateMatch(
             analysis_id=analysis.id,
             earth_region_id=c_cell.region_id,
             terrain_feature_id=c_cell.id,
             target_region_id=target_region_id,
-            location_name=c_cell.region.name if c_cell.region else "Earth Analog Location",
+            location_name=loc_display,
             lat=cell_lat,
             lon=cell_lon,
             similarity_score=sim_score,

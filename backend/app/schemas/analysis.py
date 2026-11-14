@@ -11,6 +11,13 @@ class AnalysisRunRequest(BaseModel):
     top_k: Optional[int] = 20
 
 
+class ImageSearchRequest(BaseModel):
+    image_base64: str
+    filename: Optional[str] = "orbital_image.png"
+    target_body: Optional[str] = "Mars"
+    ground_resolution_m: Optional[float] = 6.0
+
+
 class AnalysisRunResponse(BaseModel):
     analysis_id: int
     status: str

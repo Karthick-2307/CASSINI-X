@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -28,6 +28,27 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
 }) => {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>("all");
+  const [showAllCandidates, setShowAllCandidates] = useState<boolean>(false);
+
+  // Group candidates into distinct Earth analog locations
+  const distinctLocations = useMemo(() => {
+    const locMap = new Map<string, number>();
+    candidates.forEach((c) => {
+      const baseName = c.location_name.split("(")[0].trim();
+      locMap.set(baseName, (locMap.get(baseName) || 0) + 1);
+    });
+    return Array.from(locMap.entries()).map(([name, count]) => ({ name, count }));
+  }, [candidates]);
+
+  const filteredCandidates = useMemo(() => {
+    if (selectedLocationFilter === "all") return candidates;
+    return candidates.filter((c) =>
+      c.location_name.toLowerCase().includes(selectedLocationFilter.toLowerCase())
+    );
+  }, [candidates, selectedLocationFilter]);
+
+  const visibleCandidates = showAllCandidates ? filteredCandidates : filteredCandidates.slice(0, 8);
 
   if (!selectedCandidate) {
     return (
@@ -133,18 +154,49 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
   return (
     <div id="discovery-details" className="space-y-6 pt-2">
       {/* 1. Candidate Selection Strip (Ranked list) */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-mono uppercase tracking-wider text-[#94A3B8]">
-            Ranked Terrestrial Analogs ({candidates.length})
-          </span>
-          <span className="text-[11px] font-mono text-[#94A3B8]">
-            Click any site to fly the globe &amp; update analytics
-          </span>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="text-xs font-mono uppercase tracking-wider text-[#94A3B8]">
+              Ranked Terrestrial Analogs ({candidates.length} candidate sites)
+            </span>
+            <div className="text-[11px] font-mono text-[#94A3B8]">
+              Click any site to fly the globe &amp; inspect terrain comparisons
+            </div>
+          </div>
+
+          {/* Location category filter pills */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-sans">
+            <button
+              type="button"
+              onClick={() => setSelectedLocationFilter("all")}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
+                selectedLocationFilter === "all"
+                  ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold shadow-sm"
+                  : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:text-[#F8FAFC]"
+              }`}
+            >
+              All Locations ({candidates.length})
+            </button>
+            {distinctLocations.map((loc) => (
+              <button
+                key={loc.name}
+                type="button"
+                onClick={() => setSelectedLocationFilter(loc.name)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
+                  selectedLocationFilter === loc.name
+                    ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold shadow-sm"
+                    : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:text-[#F8FAFC]"
+                }`}
+              >
+                {loc.name} ({loc.count})
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          {candidates.slice(0, 6).map((cand, idx) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {visibleCandidates.map((cand, idx) => {
             const isSelected = selectedCandidate.id === cand.id;
             return (
               <div
@@ -160,7 +212,7 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
                   <span className="text-xs font-mono font-bold text-[#38BDF8]">#{idx + 1}</span>
                   <Badge variant="derived">{cand.similarity.toFixed(1)}% Sim</Badge>
                 </div>
-                <div className="text-xs font-semibold text-[#F8FAFC] truncate">
+                <div className="text-xs font-semibold text-[#F8FAFC] truncate" title={cand.location_name}>
                   {cand.location_name}
                 </div>
                 <div className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
@@ -170,6 +222,18 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
             );
           })}
         </div>
+
+        {filteredCandidates.length > 8 && (
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => setShowAllCandidates(!showAllCandidates)}
+              className="text-xs font-mono text-[#38BDF8] hover:text-[#7DD3FC] px-3 py-1 rounded bg-[#162033] border border-[#243044] transition-colors"
+            >
+              {showAllCandidates ? "▲ Show Top 8 Candidates" : `▼ View All ${filteredCandidates.length} Matched Sites`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. Main Analytics & Graph Section (2 Columns) */}

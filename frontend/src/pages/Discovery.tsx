@@ -25,7 +25,7 @@ export const Discovery: React.FC = () => {
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [selectedPlanetName, setSelectedPlanetName] = useState<string>(queryPlanet || "Mars");
   const [regions, setRegions] = useState<Region[]>([]);
-  const [selectedRegionId, setSelectedRegionId] = useState<number | null>(queryRegionId);
+  const [selectedRegionId, setSelectedRegionId] = useState<number | null>(queryRegionId || 2);
 
   // Local Image Upload State
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -37,50 +37,64 @@ export const Discovery: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisDetailResponse | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateMatch | null>(null);
 
+  // Switch planet with immediate region reload and search execution
+  const handleSelectPlanet = async (planetName: string) => {
+    setSelectedPlanetName(planetName);
+    setErrorMessage(null);
+    const targetPlanet = planets.find((p) => p.name.toLowerCase() === planetName.toLowerCase());
+    const planetId = targetPlanet ? targetPlanet.id : (planetName.toLowerCase() === "moon" ? 2 : 3);
+    try {
+      const regData = await api.getRegions(planetId);
+      setRegions(regData);
+      if (regData.length > 0) {
+        setSelectedRegionId(regData[0].id);
+        handleTriggerSearch(regData[0].id);
+      } else {
+        const fallbackId = planetName.toLowerCase() === "moon" ? 3 : 2;
+        setSelectedRegionId(fallbackId);
+        handleTriggerSearch(fallbackId);
+      }
+    } catch {
+      const fallbackId = planetName.toLowerCase() === "moon" ? 3 : 2;
+      setSelectedRegionId(fallbackId);
+      handleTriggerSearch(fallbackId);
+    }
+  };
+
   // 1. Load Planets
   useEffect(() => {
     api.getPlanets()
       .then((data) => {
         setPlanets(data);
-        if (!queryPlanet) {
-          const nonEarth = data.filter((p) => p.name !== "Earth");
-          if (nonEarth.length > 0) setSelectedPlanetName(nonEarth[0].name);
-        }
       })
-      .catch((err) => setErrorMessage(err.message));
-  }, [queryPlanet]);
+      .catch((err) => console.warn("Planets fetch:", err));
+  }, []);
 
-  // 2. Load Regions when Selected Planet Changes
+  // 2. Load Regions and trigger initial search
   useEffect(() => {
-    if (!selectedPlanetName || planets.length === 0) return;
     const targetPlanet = planets.find((p) => p.name.toLowerCase() === selectedPlanetName.toLowerCase());
-    if (!targetPlanet) return;
+    const planetId = targetPlanet ? targetPlanet.id : (selectedPlanetName.toLowerCase() === "moon" ? 2 : 3);
 
-    api.getRegions(targetPlanet.id)
+    api.getRegions(planetId)
       .then((data) => {
         setRegions(data);
-        if (queryRegionId && data.some((r) => r.id === queryRegionId)) {
-          setSelectedRegionId(queryRegionId);
-        } else if (data.length > 0 && !selectedRegionId) {
-          setSelectedRegionId(data[0].id);
+        if (data.length > 0) {
+          const matchingRegion = queryRegionId && data.find((r) => r.id === queryRegionId);
+          const nextRegionId = matchingRegion ? matchingRegion.id : (selectedRegionId || data[0].id);
+          setSelectedRegionId(nextRegionId);
+          handleTriggerSearch(nextRegionId);
+        } else {
+          const fallbackId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
+          setSelectedRegionId(fallbackId);
+          handleTriggerSearch(fallbackId);
         }
       })
-      .catch((err) => setErrorMessage(err.message));
+      .catch(() => {
+        const fallbackId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
+        setSelectedRegionId(fallbackId);
+        handleTriggerSearch(fallbackId);
+      });
   }, [selectedPlanetName, planets, queryRegionId]);
-
-  // 3. Load initial recent analysis if available
-  useEffect(() => {
-    api.getAnalyses()
-      .then((list) => {
-        if (list.length > 0 && !analysisResult) {
-          api.getAnalysisById(list[0].id).then((res) => {
-            setAnalysisResult(res);
-            if (res.candidates.length > 0) setSelectedCandidate(res.candidates[0]);
-          });
-        }
-      })
-      .catch(() => {});
-  }, [analysisResult]);
 
   // Handle IAU Gazetteer selection
   const handleSelectGazetteerItem = async (item: GazetteerItem) => {
@@ -109,10 +123,10 @@ export const Discovery: React.FC = () => {
 
   // Trigger discovery search
   const handleTriggerSearch = async (overrideRegionId?: number) => {
-    const targetId = overrideRegionId || selectedRegionId;
+    let targetId = overrideRegionId || selectedRegionId;
     if (!targetId) {
-      setErrorMessage("Please select or search a reference planetary region first.");
-      return;
+      targetId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
+      setSelectedRegionId(targetId);
     }
 
     setIsSearching(true);
@@ -138,12 +152,43 @@ export const Discovery: React.FC = () => {
     }
   };
 
-  const handleImageSelected = (file: File | null, url: string | null) => {
+  const handleImageSelected = async (file: File | null, url: string | null) => {
     setUploadedImage(file);
     setUploadedImageUrl(url);
-    if (file) {
-      // Trigger search with current selected region as the baseline
-      handleTriggerSearch();
+    if (!file) return;
+
+    setIsSearching(true);
+    setErrorMessage(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          const result = await api.searchByImage({
+            image_base64: base64Data,
+            filename: file.name,
+            target_body: selectedPlanetName,
+            ground_resolution_m: 6.0,
+          });
+          setAnalysisResult(result);
+          if (result.candidates.length > 0) {
+            setSelectedCandidate(result.candidates[0]);
+          }
+        } catch (err: unknown) {
+          setErrorMessage(err instanceof Error ? err.message : "Failed to process and search uploaded image.");
+        } finally {
+          setIsSearching(false);
+        }
+      };
+      reader.onerror = () => {
+        setErrorMessage("Failed to read image file.");
+        setIsSearching(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Image processing error.");
+      setIsSearching(false);
     }
   };
 
@@ -185,7 +230,7 @@ export const Discovery: React.FC = () => {
       <UnifiedDiscoverySearch
         planets={planets}
         selectedPlanetName={selectedPlanetName}
-        setSelectedPlanetName={setSelectedPlanetName}
+        setSelectedPlanetName={handleSelectPlanet}
         regions={regions}
         selectedRegionId={selectedRegionId}
         onSelectRegion={(id) => {

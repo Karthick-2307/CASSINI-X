@@ -18,7 +18,7 @@ export interface UnifiedDiscoverySearchProps {
 }
 
 export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
-  planets,
+  planets: _planets,
   selectedPlanetName,
   setSelectedPlanetName,
   regions,
@@ -38,9 +38,10 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activePlanets = planets.filter((p) => p.name !== "Earth");
+  const isMars = selectedPlanetName.toLowerCase() === "mars";
+  const isMoon = selectedPlanetName.toLowerCase() === "moon";
 
-  // Filter ingested regions matching search
+  // Filter ingested regions matching current search
   const filteredRegions = regions.filter((r) =>
     r.name.toLowerCase().includes(searchTerm.toLowerCase().trim())
   );
@@ -86,6 +87,103 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
     onSelectRegion(reg.id);
   };
 
+  const handleExecuteSearch = async () => {
+    setIsDropdownOpen(false);
+    const query = searchTerm.trim().toLowerCase();
+
+    // Cross-body smart detection
+    const isMoonKeywords = ["shackleton", "tranquillitatis", "apollo", "tycho", "copernicus", "luna", "mare "];
+    const isMarsKeywords = ["jezero", "gale", "olympus", "korolev", "sharp", "perseverance", "curiosity", "valles"];
+
+    if (query) {
+      // Check if user entered a Moon query while on Mars
+      if (isMars && isMoonKeywords.some((k) => query.includes(k))) {
+        setSelectedPlanetName("Moon");
+        try {
+          const moonRegs = await api.getRegions(2);
+          const match = moonRegs.find((r) => r.name.toLowerCase().includes(query));
+          if (match) {
+            onSelectRegion(match.id);
+            return;
+          }
+          const gaz = await api.searchGazetteer(query, "Moon");
+          if (gaz.length > 0) {
+            onSelectGazetteerItem(gaz[0]);
+            return;
+          }
+          if (moonRegs.length > 0) {
+            onSelectRegion(moonRegs[0].id);
+            return;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // Check if user entered a Mars query while on Moon
+      if (isMoon && isMarsKeywords.some((k) => query.includes(k))) {
+        setSelectedPlanetName("Mars");
+        try {
+          const marsRegs = await api.getRegions(3);
+          const match = marsRegs.find((r) => r.name.toLowerCase().includes(query));
+          if (match) {
+            onSelectRegion(match.id);
+            return;
+          }
+          const gaz = await api.searchGazetteer(query, "Mars");
+          if (gaz.length > 0) {
+            onSelectGazetteerItem(gaz[0]);
+            return;
+          }
+          if (marsRegs.length > 0) {
+            onSelectRegion(marsRegs[0].id);
+            return;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // 1. Check if query matches an ingested region on current planet
+      const matchedRegion = regions.find((r) =>
+        r.name.toLowerCase().includes(query)
+      );
+      if (matchedRegion) {
+        setSearchTerm(matchedRegion.name);
+        onSelectRegion(matchedRegion.id);
+        return;
+      }
+
+      // 2. Check if in gazetteer results
+      const matchedGazetteer = gazetteerResults.find((g) =>
+        g.name.toLowerCase().includes(query)
+      );
+      if (matchedGazetteer) {
+        setSearchTerm(matchedGazetteer.name);
+        onSelectGazetteerItem(matchedGazetteer);
+        return;
+      }
+
+      // 3. Query gazetteer live if not found yet
+      try {
+        setIsLoadingGazetteer(true);
+        const liveItems = await api.searchGazetteer(searchTerm, selectedPlanetName);
+        if (liveItems.length > 0) {
+          setSearchTerm(liveItems[0].name);
+          onSelectGazetteerItem(liveItems[0]);
+          return;
+        }
+      } catch {
+        // fallback
+      } finally {
+        setIsLoadingGazetteer(false);
+      }
+    }
+
+    // Default trigger using active region
+    onTriggerSearch();
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -104,49 +202,137 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Curated quick recommendations
-  const quickSuggestions = [
-    { name: "Jezero Crater", planet: "Mars" },
-    { name: "Gale Crater", planet: "Mars" },
-    { name: "Olympus Mons", planet: "Mars" },
-    { name: "Mare Tranquillitatis", planet: "Moon" },
-    { name: "Shackleton Crater", planet: "Moon" },
+  // Distinct landmark chips for Mars vs Moon
+  const marsLandmarks = [
+    { name: "Jezero Crater Floor & Delta", short: "Jezero Crater", id: 2 },
+    { name: "Gale Crater & Mount Sharp", short: "Gale Crater", id: 7 },
+    { name: "Olympus Mons Caldera Rim", short: "Olympus Mons", id: 4 },
+    { name: "Korolev Crater (Water Ice Deposit)", short: "Korolev Crater", id: 8 },
   ];
 
+  const moonLandmarks = [
+    { name: "Mare Tranquillitatis (Apollo 11)", short: "Mare Tranquillitatis", id: 3 },
+    { name: "Shackleton Crater & South Pole", short: "Shackleton Crater", id: 5 },
+  ];
+
+  const currentLandmarks = isMars ? marsLandmarks : moonLandmarks;
+
   return (
-    <div ref={containerRef} className="space-y-3 max-w-4xl mx-auto">
-      {/* Target Body Switch & Search Form Container */}
-      <div className="bg-[#111826] border border-[#243044] rounded-card p-3 shadow-sm space-y-2.5">
+    <div ref={containerRef} className="space-y-3.5 max-w-4xl mx-auto">
+      {/* 1. SEPARATE PLANETARY UI TABS FOR MARS & MOON */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* MARS SELECTION TAB */}
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPlanetName("Mars");
+            setSearchTerm("");
+          }}
+          className={`relative p-3.5 rounded-card text-left transition-all duration-200 border ${
+            isMars
+              ? "bg-[#1C1214] border-[#EF4444] shadow-[0_0_20px_rgba(239,68,68,0.25)] ring-1 ring-[#EF4444]/60"
+              : "bg-[#111826]/70 border-[#243044] hover:border-[#EF4444]/40 hover:bg-[#162033]"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-xl">🔴</span>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-sm font-heading font-bold ${isMars ? "text-[#F8FAFC]" : "text-[#94A3B8]"}`}>
+                    MARS
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#EF4444]/20 text-[#F87171] border border-[#EF4444]/30">
+                    Red Planet
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-[#94A3B8] mt-0.5">
+                  MRO CTX (6m/px) • MOLA (463m)
+                </div>
+              </div>
+            </div>
+            {isMars && (
+              <span className="text-[10px] font-mono font-bold text-[#EF4444] uppercase tracking-wider bg-[#EF4444]/10 px-2 py-0.5 rounded border border-[#EF4444]/30">
+                ACTIVE
+              </span>
+            )}
+          </div>
+          <div className="mt-2 text-[10px] font-mono text-[#94A3B8]/80 flex items-center justify-between border-t border-[#243044]/60 pt-1.5">
+            <span>Gravity: 3.71 m/s²</span>
+            <span>Radius: 3,389.5 km</span>
+          </div>
+        </button>
+
+        {/* MOON SELECTION TAB */}
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPlanetName("Moon");
+            setSearchTerm("");
+          }}
+          className={`relative p-3.5 rounded-card text-left transition-all duration-200 border ${
+            isMoon
+              ? "bg-[#0D1829] border-[#38BDF8] shadow-[0_0_20px_rgba(56,189,248,0.25)] ring-1 ring-[#38BDF8]/60"
+              : "bg-[#111826]/70 border-[#243044] hover:border-[#38BDF8]/40 hover:bg-[#162033]"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-xl">🌕</span>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-sm font-heading font-bold ${isMoon ? "text-[#F8FAFC]" : "text-[#94A3B8]"}`}>
+                    MOON
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30">
+                    Lunar Surface
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-[#94A3B8] mt-0.5">
+                  LRO LOLA (59m/px) • SLDEM2015
+                </div>
+              </div>
+            </div>
+            {isMoon && (
+              <span className="text-[10px] font-mono font-bold text-[#38BDF8] uppercase tracking-wider bg-[#38BDF8]/10 px-2 py-0.5 rounded border border-[#38BDF8]/30">
+                ACTIVE
+              </span>
+            )}
+          </div>
+          <div className="mt-2 text-[10px] font-mono text-[#94A3B8]/80 flex items-center justify-between border-t border-[#243044]/60 pt-1.5">
+            <span>Gravity: 1.62 m/s²</span>
+            <span>Radius: 1,737.4 km</span>
+          </div>
+        </button>
+      </div>
+
+      {/* 2. THEMED SEARCH BAR CONTAINER */}
+      <div
+        className={`bg-[#111826] border rounded-card p-3 shadow-md space-y-2.5 transition-colors ${
+          isMars ? "border-[#EF4444]/40" : "border-[#38BDF8]/40"
+        }`}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#243044]/80">
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8]">Target Celestial Body:</span>
-            <div className="inline-flex p-0.5 rounded bg-[#162033] border border-[#243044]">
-              {activePlanets.map((p) => {
-                const isActive = p.name.toLowerCase() === selectedPlanetName.toLowerCase();
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSelectedPlanetName(p.name)}
-                    className={`px-3 py-1 text-xs font-sans rounded transition-colors ${
-                      isActive
-                        ? "bg-[#111826] text-[#38BDF8] font-semibold border border-[#38BDF8]/40 shadow-sm"
-                        : "text-[#94A3B8] hover:text-[#F8FAFC]"
-                    }`}
-                  >
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
+            <span
+              className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center space-x-1.5 ${
+                isMars ? "text-[#F87171]" : "text-[#38BDF8]"
+              }`}
+            >
+              <span>{isMars ? "🔴" : "🌕"}</span>
+              <span>{selectedPlanetName} Terrain Analog Search</span>
+            </span>
+            <Badge variant="active">
+              {isMars ? "MRO CTX / MOLA Ingested" : "LRO LOLA Ingested"}
+            </Badge>
           </div>
 
           <span className="text-[11px] font-mono text-[#94A3B8]/80 text-right">
-            USGS / NASA Planetary Altimetry &amp; IAU Gazetteer
+            USGS Astrogeology &amp; IAU Gazetteer
           </span>
         </div>
 
-        {/* The Search Bar Bar Input with Insert Image Option */}
+        {/* The Search Bar Input with Insert Image Option */}
         <div className="relative flex flex-col sm:flex-row items-stretch gap-2">
           {/* Main search input */}
           <div className="relative flex-1">
@@ -164,19 +350,35 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
                 setIsDropdownOpen(true);
               }}
               onFocus={() => setIsDropdownOpen(true)}
-              placeholder={`Search ${selectedPlanetName} terrain, crater, or feature (e.g. Gale, Jezero, Tycho...)`}
-              className="w-full bg-[#162033] border border-[#243044] rounded-btn pl-10 pr-24 py-2.5 text-xs text-[#F8FAFC] placeholder:text-[#94A3B8]/60 focus:outline-none focus:border-[#38BDF8] font-sans shadow-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleExecuteSearch();
+                }
+              }}
+              placeholder={
+                isMars
+                  ? "Search Mars crater, volcano, or basin (e.g. Jezero, Gale, Olympus Mons, Korolev)..."
+                  : "Search Moon crater, mare, or polar basin (e.g. Shackleton, Mare Tranquillitatis, Tycho)..."
+              }
+              className={`w-full bg-[#162033] border rounded-btn pl-10 pr-28 py-2.5 text-xs text-[#F8FAFC] placeholder:text-[#94A3B8]/60 font-sans shadow-sm focus:outline-none transition-colors ${
+                isMars
+                  ? "border-[#243044] focus:border-[#EF4444] focus:ring-1 focus:ring-[#EF4444]/40"
+                  : "border-[#243044] focus:border-[#38BDF8] focus:ring-1 focus:ring-[#38BDF8]/40"
+              }`}
             />
 
             {isLoadingGazetteer && (
-              <span className="absolute right-20 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#38BDF8] animate-pulse" />
+              <span className={`absolute right-24 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full animate-pulse ${
+                isMars ? "bg-[#EF4444]" : "bg-[#38BDF8]"
+              }`} />
             )}
 
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute right-14 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC] text-sm px-1"
+                className="absolute right-20 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#F8FAFC] text-sm px-1"
                 aria-label="Clear search input"
               >
                 &times;
@@ -187,8 +389,12 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#111826] hover:bg-[#243044] text-[#38BDF8] border border-[#243044] hover:border-[#38BDF8]/60 text-[11px] font-sans font-medium transition-colors shadow-sm"
-              title="Insert local planetary orbital image"
+              className={`absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#111826] border text-[11px] font-sans font-medium transition-colors shadow-sm ${
+                isMars
+                  ? "text-[#F87171] border-[#243044] hover:border-[#EF4444]/60 hover:bg-[#1c1214]"
+                  : "text-[#38BDF8] border-[#243044] hover:border-[#38BDF8]/60 hover:bg-[#162033]"
+              }`}
+              title={`Upload local ${selectedPlanetName} orbital image to extract morphometric features`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -208,9 +414,11 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
           <Button
             variant="primary"
             size="md"
-            onClick={onTriggerSearch}
+            onClick={handleExecuteSearch}
             disabled={isSearching}
-            className="sm:w-auto w-full px-5 py-2.5 text-xs font-semibold shadow-sm shrink-0"
+            className={`sm:w-auto w-full px-5 py-2.5 text-xs font-semibold shadow-sm shrink-0 ${
+              isMars ? "bg-[#DC2626] hover:bg-[#EF4444] text-white border-transparent" : ""
+            }`}
           >
             {isSearching ? "Searching..." : "Find Earth Analogs"}
           </Button>
@@ -218,17 +426,22 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
 
         {/* Uploaded Local Image Preview Chip */}
         {uploadedImage && uploadedImageUrl && (
-          <div className="flex items-center justify-between p-2 rounded bg-[#162033] border border-[#243044] text-xs font-sans">
+          <div className="flex items-center justify-between p-2.5 rounded bg-[#162033] border border-[#38BDF8]/40 text-xs font-sans shadow-sm">
             <div className="flex items-center space-x-2.5 overflow-hidden">
               <img
                 src={uploadedImageUrl}
                 alt="Local orbital upload preview"
-                className="w-9 h-9 object-cover rounded border border-[#243044] shrink-0"
+                className="w-10 h-10 object-cover rounded border border-[#38BDF8]/50 shrink-0 shadow-sm"
               />
               <div className="truncate">
-                <div className="text-[#F8FAFC] font-medium truncate">{uploadedImage.name}</div>
-                <div className="text-[10px] font-mono text-[#94A3B8]">
-                  {(uploadedImage.size / (1024 * 1024)).toFixed(2)} MB • Processed locally
+                <div className="text-[#F8FAFC] font-semibold flex items-center space-x-2 truncate">
+                  <span>{uploadedImage.name}</span>
+                  <Badge variant="active">Orbital Morphometry Extracted</Badge>
+                </div>
+                <div className="text-[11px] font-mono text-[#38BDF8]">
+                  {isSearching
+                    ? "⏳ Extracting relief, 2D slope & surface roughness..."
+                    : `✓ Matched against Earth candidate terrain databases for ${selectedPlanetName}`}
                 </div>
               </div>
             </div>
@@ -236,7 +449,7 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
             <button
               type="button"
               onClick={handleClearImage}
-              className="text-xs text-[#94A3B8] hover:text-[#F87171] px-2 py-1 transition-colors"
+              className="text-xs text-[#94A3B8] hover:text-[#F87171] px-2.5 py-1 rounded bg-[#111826] border border-[#243044] hover:border-[#F87171]/40 transition-colors shrink-0"
               title="Remove uploaded image"
             >
               Remove ✕
@@ -280,7 +493,7 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
             {gazetteerResults.length > 0 && (
               <div className="p-2 space-y-1">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-[#94A3B8] px-2 pt-1">
-                  IAU Planetary Gazetteer
+                  IAU Planetary Gazetteer ({selectedPlanetName})
                 </div>
                 {gazetteerResults.map((item) => (
                   <div
@@ -305,34 +518,31 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
         )}
       </div>
 
-      {/* Quick Suggestions Chips */}
+      {/* 3. PLANET-SPECIFIC QUICK LANDMARKS CHIPS */}
       <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs font-sans">
-        <span className="text-[11px] font-mono text-[#94A3B8] pr-1">Popular Landmarks:</span>
-        {quickSuggestions.map((sug) => {
-          const isSelected = searchTerm.toLowerCase().includes(sug.name.toLowerCase());
+        <span className="text-[11px] font-mono text-[#94A3B8] pr-1">
+          {selectedPlanetName} Landmarks:
+        </span>
+        {currentLandmarks.map((sug) => {
+          const isSelected = selectedRegionId === sug.id;
           return (
             <button
               key={sug.name}
               type="button"
-              onClick={() => {
-                setSelectedPlanetName(sug.planet);
+              onClick={async () => {
                 setSearchTerm(sug.name);
-                const match = regions.find((r) => r.name.toLowerCase().includes(sug.name.toLowerCase()));
-                if (match) {
-                  onSelectRegion(match.id);
-                } else {
-                  api.searchGazetteer(sug.name, sug.planet).then((items) => {
-                    if (items.length > 0) onSelectGazetteerItem(items[0]);
-                  });
-                }
+                setIsDropdownOpen(false);
+                onSelectRegion(sug.id);
               }}
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
+              className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all border ${
                 isSelected
-                  ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold"
+                  ? isMars
+                    ? "bg-[#EF4444]/20 text-[#F87171] border-[#EF4444] font-semibold shadow-sm"
+                    : "bg-[#38BDF8]/20 text-[#38BDF8] border-[#38BDF8] font-semibold shadow-sm"
                   : "bg-[#111826] text-[#94A3B8] hover:text-[#F8FAFC] border-[#243044] hover:bg-[#162033]"
               }`}
             >
-              {sug.name} ({sug.planet})
+              {sug.short}
             </button>
           );
         })}

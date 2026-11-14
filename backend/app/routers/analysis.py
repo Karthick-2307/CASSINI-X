@@ -1,17 +1,23 @@
+import base64
+import io
 import json
 import logging
 from typing import List, Optional
+import numpy as np
+from PIL import Image
+from scipy import ndimage
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.db import get_db
-from app.models import Planet, Region, Analysis, CandidateMatch
+from app.models import Planet, Region, Analysis, CandidateMatch, TerrainFeature
 from app.analysis.engine import run_analysis_pipeline
 from app.analysis.validate import execute_validation_pipeline
 from app.schemas import (
     AnalysisRunRequest,
     AnalysisRunResponse,
+    ImageSearchRequest,
     AnalysisDetailResponse,
     CandidateMatchResponse,
     AnalysisSummaryItem,
@@ -162,6 +168,110 @@ def get_analysis_by_id(analysis_id: int, db: Session = Depends(get_db)):
         candidate_count=len(candidates),
         candidates=[serialize_candidate_match(c) for c in candidates]
     )
+
+
+@router.post("/api/analysis/search-by-image", response_model=AnalysisDetailResponse)
+def search_by_image(req: ImageSearchRequest, db: Session = Depends(get_db)):
+    if not req.image_base64:
+        raise HTTPException(status_code=422, detail="image_base64 cannot be empty.")
+
+    try:
+        b64_str = req.image_base64
+        if "," in b64_str:
+            b64_str = b64_str.split(",", 1)[1]
+        raw_bytes = base64.b64decode(b64_str)
+        pil_img = Image.open(io.BytesIO(raw_bytes))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Failed to decode or parse image: {str(e)}")
+
+    # Convert to grayscale 64x64 grid
+    gray_img = pil_img.convert("L").resize((64, 64), Image.Resampling.BILINEAR)
+    arr = np.array(gray_img, dtype=np.float32)
+
+    # Physical feature extraction from pixel luminance
+    res_m = float(req.ground_resolution_m or 6.0)
+    # Scaled relative relief (z_rel)
+    z_rel = (arr - float(np.mean(arr))) * 1.5
+
+    # 2D Horn / Sobel finite-difference gradient
+    kernel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32) / (8.0 * res_m)
+    kernel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=np.float32) / (8.0 * res_m)
+    dz_dx = ndimage.convolve(z_rel, kernel_x, mode="nearest")
+    dz_dy = ndimage.convolve(z_rel, kernel_y, mode="nearest")
+    slope_deg = np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2)))
+    slope_deg = np.clip(slope_deg, 0.1, 55.0)
+
+    # 5x5 roughness standard deviation
+    mean_sq = ndimage.uniform_filter(z_rel**2, size=5)
+    mean_val = ndimage.uniform_filter(z_rel, size=5)
+    roughness_m = np.sqrt(np.maximum(0.0, mean_sq - mean_val**2))
+
+    # Resolve target planet
+    planet = db.query(Planet).filter(Planet.name.ilike(req.target_body or "Mars")).first()
+    if not planet:
+        planet = db.query(Planet).filter(Planet.name == "Mars").first()
+
+    clean_name = req.filename or "Orbital_Observation"
+    region_name = f"Observation: {clean_name}"
+    region = db.query(Region).filter(Region.name == region_name).first()
+    if not region:
+        region = Region(
+            planet_id=planet.id,
+            name=region_name,
+            lat=0.0,
+            lon=0.0,
+            elevation_m=float(np.median(z_rel)),
+            slope_deg=float(np.mean(slope_deg)),
+            roughness_m=float(np.mean(roughness_m)),
+            description=f"Orbital image observation ({clean_name}) processed at ~{res_m:.1f}m/px resolution.",
+            is_curated=False
+        )
+        db.add(region)
+        db.commit()
+        db.refresh(region)
+    else:
+        region.elevation_m = float(np.median(z_rel))
+        region.slope_deg = float(np.mean(slope_deg))
+        region.roughness_m = float(np.mean(roughness_m))
+        db.commit()
+
+    # Re-sample into terrain feature cells
+    db.query(TerrainFeature).filter(TerrainFeature.region_id == region.id).delete()
+    cells = []
+    step = 8  # 8x8 patches across 64x64 grid -> 64 feature cells
+    cell_idx = 0
+    for r in range(0, 64, step):
+        for c in range(0, 64, step):
+            patch_z = z_rel[r:r+step, c:c+step]
+            patch_s = slope_deg[r:r+step, c:c+step]
+            patch_r = roughness_m[r:r+step, c:c+step]
+            cells.append(
+                TerrainFeature(
+                    region_id=region.id,
+                    scale_m=500.0,
+                    window_px=5,
+                    cell_index=cell_idx,
+                    elevation_relative=float(np.median(patch_z)),
+                    slope_deg=float(np.mean(patch_s)),
+                    roughness_m=float(np.mean(patch_r)),
+                    valid_fraction=1.0,
+                    native_res_m=res_m,
+                    kind="derived"
+                )
+            )
+            cell_idx += 1
+    db.bulk_save_objects(cells)
+    db.commit()
+
+    # Run discovery pipeline
+    analysis = run_analysis_pipeline(
+        db=db,
+        target_region_id=region.id,
+        threshold=0.0,
+        top_k=20
+    )
+
+    return get_analysis_by_id(analysis.id, db)
 
 
 @router.get("/api/analogs", response_model=List[CandidateMatchResponse])

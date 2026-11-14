@@ -20,6 +20,7 @@ from .terrain import (
 from .analysis import (
     AnalysisRunRequest,
     AnalysisRunResponse,
+    ImageSearchRequest,
     FeatureComparisonItem,
     ExplanationItem,
     CandidateMatchResponse,
