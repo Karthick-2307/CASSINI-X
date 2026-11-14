@@ -38,23 +38,45 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>("all");
   const [showAllCandidates, setShowAllCandidates] = useState<boolean>(false);
+  const [uniqueRegionsOnly, setUniqueRegionsOnly] = useState<boolean>(true);
 
   // Group candidates into distinct Earth analog locations
   const distinctLocations = useMemo(() => {
     const locMap = new Map<string, number>();
     candidates.forEach((c) => {
-      const baseName = c.location_name.split("(")[0].trim();
+      const baseName = c.location_name.replace(/\s*\(Sector \d+\)/i, "").trim();
       locMap.set(baseName, (locMap.get(baseName) || 0) + 1);
     });
     return Array.from(locMap.entries()).map(([name, count]) => ({ name, count }));
   }, [candidates]);
 
+  // Spatial Proximity & Region Deduplication Filter
   const filteredCandidates = useMemo(() => {
-    if (selectedLocationFilter === "all") return candidates;
-    return candidates.filter((c) =>
-      c.location_name.toLowerCase().includes(selectedLocationFilter.toLowerCase())
-    );
-  }, [candidates, selectedLocationFilter]);
+    let list = candidates;
+
+    // 1. Deduplicate nearby cells belonging to the same region (keep peak match per region)
+    if (uniqueRegionsOnly) {
+      const seenBases = new Set<string>();
+      const deduplicated: CandidateMatch[] = [];
+      for (const c of list) {
+        const base = c.location_name.replace(/\s*\(Sector \d+\)/i, "").trim();
+        if (!seenBases.has(base)) {
+          seenBases.add(base);
+          deduplicated.push(c);
+        }
+      }
+      list = deduplicated;
+    }
+
+    // 2. Specific Region Name Filter
+    if (selectedLocationFilter !== "all") {
+      list = list.filter((c) =>
+        c.location_name.toLowerCase().includes(selectedLocationFilter.toLowerCase())
+      );
+    }
+
+    return list;
+  }, [candidates, uniqueRegionsOnly, selectedLocationFilter]);
 
   const visibleCandidates = showAllCandidates ? filteredCandidates : filteredCandidates.slice(0, 8);
 
@@ -163,44 +185,85 @@ export const DiscoveryResultsSection: React.FC<DiscoveryResultsSectionProps> = (
     <div id="discovery-details" className="space-y-6 pt-2">
       {/* 1. Candidate Selection Strip (Ranked list) */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-2 border-b border-[#243044]/60">
           <div>
-            <span className="text-xs font-mono uppercase tracking-wider text-[#94A3B8]">
-              Ranked Terrestrial Analogs ({candidates.length} candidate sites)
-            </span>
-            <div className="text-[11px] font-mono text-[#94A3B8]">
-              Click any site to fly the globe &amp; inspect terrain comparisons
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#94A3B8]">
+                Ranked Terrestrial Analogs
+              </span>
+              <Badge variant="active">
+                {uniqueRegionsOnly
+                  ? `${filteredCandidates.length} Distinct Regions (Proximity Filter Active)`
+                  : `${filteredCandidates.length} Total Sectors & Grid Cells`}
+              </Badge>
+            </div>
+            <div className="text-[11px] font-mono text-[#94A3B8] mt-0.5">
+              {uniqueRegionsOnly
+                ? "Deduplicated by geographic region: showing peak analog site per continent & basin"
+                : "Showing all sub-sectors and individual candidate terrain cells"}
             </div>
           </div>
 
-          {/* Location category filter pills */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs font-sans">
+          {/* Spatial Proximity Filter Toggle */}
+          <div className="flex items-center space-x-2 shrink-0">
+            <span className="text-[11px] font-mono text-[#94A3B8]">Region Filter:</span>
+            <div className="inline-flex p-0.5 rounded bg-[#162033] border border-[#243044]">
+              <button
+                type="button"
+                onClick={() => setUniqueRegionsOnly(true)}
+                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
+                  uniqueRegionsOnly
+                    ? "bg-[#111826] text-[#38BDF8] font-bold border border-[#38BDF8]/40 shadow-sm"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
+                title="Hides nearby redundant sectors from the same region"
+              >
+                1 Site Per Region
+              </button>
+              <button
+                type="button"
+                onClick={() => setUniqueRegionsOnly(false)}
+                className={`px-2.5 py-1 text-[11px] font-mono rounded transition-colors ${
+                  !uniqueRegionsOnly
+                    ? "bg-[#111826] text-[#38BDF8] font-bold border border-[#38BDF8]/40 shadow-sm"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
+                title="Shows all individual candidate cells including nearby sectors"
+              >
+                All Sectors ({candidates.length})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Location category filter pills */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs font-sans">
+          <span className="text-[11px] font-mono text-[#94A3B8] mr-1">Locations:</span>
+          <button
+            type="button"
+            onClick={() => setSelectedLocationFilter("all")}
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
+              selectedLocationFilter === "all"
+                ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold shadow-sm"
+                : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:text-[#F8FAFC]"
+            }`}
+          >
+            All ({uniqueRegionsOnly ? distinctLocations.length : candidates.length})
+          </button>
+          {distinctLocations.map((loc) => (
             <button
+              key={loc.name}
               type="button"
-              onClick={() => setSelectedLocationFilter("all")}
+              onClick={() => setSelectedLocationFilter(loc.name)}
               className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
-                selectedLocationFilter === "all"
+                selectedLocationFilter === loc.name
                   ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold shadow-sm"
                   : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:text-[#F8FAFC]"
               }`}
             >
-              All Locations ({candidates.length})
+              {loc.name} {loc.count > 1 && !uniqueRegionsOnly && `(${loc.count})`}
             </button>
-            {distinctLocations.map((loc) => (
-              <button
-                key={loc.name}
-                type="button"
-                onClick={() => setSelectedLocationFilter(loc.name)}
-                className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono transition-colors border ${
-                  selectedLocationFilter === loc.name
-                    ? "bg-[#162033] text-[#38BDF8] border-[#38BDF8]/60 font-semibold shadow-sm"
-                    : "bg-[#111826] text-[#94A3B8] border-[#243044] hover:text-[#F8FAFC]"
-                }`}
-              >
-                {loc.name} ({loc.count})
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
