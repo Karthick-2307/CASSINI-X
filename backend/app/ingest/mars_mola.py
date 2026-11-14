@@ -17,6 +17,8 @@ from app.ingest.common import (
     PROCESSED_DIR
 )
 
+os.environ["GDAL_HTTP_UNSAFESSL"] = "YES"
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("astra-x.ingest.mars")
 

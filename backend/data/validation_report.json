@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-13T10:12:46.983342+00:00",
+  "timestamp": "2026-11-14T08:40:56.933332+00:00",
   "model_name": "Weighted Euclidean Similarity (Robust Scaling)",
   "features": [
     "elevation_relative",
@@ -11,42 +11,55 @@
       "benchmark_name": "Lanzarote Volcanic Field (Canaries)",
       "target_region": "Mare Tranquillitatis (Apollo 11 Basin)",
       "analog_region": "Lanzarote Volcanic Field",
-      "pool_size": 358,
-      "model_best_rank": 1,
-      "slope_best_rank": 1,
-      "expected_random_rank": 179.5,
-      "model_similarity": 91.3,
-      "slope_similarity": 99.53,
+      "pool_size": 2288,
+      "model_best_rank": 4,
+      "slope_best_rank": 16,
+      "expected_random_rank": 1144.5,
+      "model_similarity": 95.64,
+      "slope_similarity": 99.51,
       "model_beats_slope": true,
       "model_beats_random": true
+    },
+    {
+      "benchmark_name": "Mauna Kea & Mauna Loa",
+      "target_region": "Mare Tranquillitatis (Apollo 11 Basin)",
+      "analog_region": "Mauna Kea & Kilauea Flanks",
+      "pool_size": 2288,
+      "model_best_rank": 2029,
+      "slope_best_rank": 2124,
+      "expected_random_rank": 1144.5,
+      "model_similarity": 12.49,
+      "slope_similarity": 2.77,
+      "model_beats_slope": true,
+      "model_beats_random": false
     }
   ],
   "metrics_summary": {
     "model": {
-      "count": 1,
-      "mean_rank": 1.0,
-      "median_rank": 1.0,
-      "mrr": 1.0,
+      "count": 2,
+      "mean_rank": 1016.5,
+      "median_rank": 1016.5,
+      "mrr": 0.1252,
       "hit_rates": {
-        "hit_at_1": 1.0,
-        "hit_at_5": 1.0,
-        "hit_at_10": 1.0,
-        "hit_at_20": 1.0
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.5,
+        "hit_at_10": 0.5,
+        "hit_at_20": 0.5
       }
     },
     "baseline_slope": {
-      "count": 1,
-      "mean_rank": 1.0,
-      "median_rank": 1.0,
-      "mrr": 1.0,
+      "count": 2,
+      "mean_rank": 1070.0,
+      "median_rank": 1070.0,
+      "mrr": 0.0315,
       "hit_rates": {
-        "hit_at_1": 1.0,
-        "hit_at_5": 1.0,
-        "hit_at_10": 1.0,
-        "hit_at_20": 1.0
+        "hit_at_1": 0.0,
+        "hit_at_5": 0.0,
+        "hit_at_10": 0.0,
+        "hit_at_20": 0.5
       }
     },
-    "baseline_random_expected_rank": 179.5
+    "baseline_random_expected_rank": 1144.5
   },
-  "statistical_power_note": "Validation performed across 1 active benchmark pairings with 358 candidate cells. Statistical power is limited given the small number of ingested terrestrial benchmark regions. More benchmark analog regions (Atacama, Devon Island, Hawaii) will be ingested in subsequent data expansions."
+  "statistical_power_note": "Validation performed across 2 active benchmark pairings with 2288 candidate cells. Statistical power is limited given the small number of ingested terrestrial benchmark regions. More benchmark analog regions (Atacama, Devon Island, Hawaii) will be ingested in subsequent data expansions."
 }

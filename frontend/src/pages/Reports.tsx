@@ -92,9 +92,9 @@ export const Reports: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left: Report Configuration Form */}
-        <Card className="lg:col-span-5 space-y-5 border-border">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
-            <h3 className="text-sm font-heading font-bold text-text-primary uppercase tracking-wide">
+        <Card className="lg:col-span-5 space-y-5 border-slate-200">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide">
               Compile Scientific Dossier
             </h3>
             <Badge variant="ok">Live Generator</Badge>
@@ -194,8 +194,8 @@ export const Reports: React.FC = () => {
 
         {/* Right: Generated Reports Archive */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
-            <h3 className="text-sm font-heading font-bold text-text-primary uppercase tracking-wide">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide">
               Generated Reports Archive
             </h3>
             <Badge variant="neutral">{reports.length} Dossier{reports.length === 1 ? "" : "s"}</Badge>
@@ -216,22 +216,22 @@ export const Reports: React.FC = () => {
               {reports.map((rep) => (
                 <Card
                   key={rep.id}
-                  className="p-4 border-border hover:border-accent-cyan/50 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                  className="p-4 bg-slate-900/80 border-white/10 hover:border-sky-400 shadow-lg transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-slate-100"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-mono font-bold text-accent-cyan">
+                      <span className="text-xs font-mono font-bold text-sky-400">
                         Dossier #{rep.id}
                       </span>
                       <Badge variant="ok">PDF</Badge>
-                      <span className="text-[11px] font-mono text-text-muted">
+                      <span className="text-[11px] font-mono text-slate-400">
                         Analysis #{rep.analysis_id}
                       </span>
                     </div>
-                    <h4 className="text-sm font-heading font-bold text-text-primary">
+                    <h4 className="text-sm font-heading font-bold text-white">
                       {rep.title}
                     </h4>
-                    <div className="text-[11px] font-mono text-text-muted flex items-center space-x-3">
+                    <div className="text-[11px] font-mono text-slate-400 flex items-center space-x-3">
                       <span>Created: {new Date(rep.created_at).toLocaleString()}</span>
                       <span>Size: {formatFileSize(rep.file_size_bytes)}</span>
                     </div>

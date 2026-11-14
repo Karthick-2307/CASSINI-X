@@ -114,13 +114,13 @@ export const About: React.FC = () => {
       </section>
 
       {/* 4. Team Identity (CASSIN X) */}
-      <Card className="space-y-6 border-border bg-gradient-to-br from-panel via-raised to-panel p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <Card className="space-y-6 border border-white/10 bg-slate-900/90 backdrop-blur-xl shadow-2xl p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div className="space-y-1">
-            <h3 className="text-xl font-heading font-bold text-text-primary">
+            <h3 className="text-xl font-heading font-extrabold text-white tracking-wide">
               The CASSIN X Team
             </h3>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-slate-300">
               Originators and core developers of the ASTRA-X Planetary Analog Discovery Platform.
             </p>
           </div>
@@ -128,36 +128,36 @@ export const About: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 bg-base/60 rounded-btn border border-border space-y-1">
-            <div className="font-heading font-semibold text-text-primary text-sm">
+          <div className="p-4 bg-slate-950/80 rounded-xl border border-white/10 space-y-1.5 backdrop-blur-md shadow-sm">
+            <div className="font-heading font-bold text-white text-sm">
               [TEAM MEMBER NAME]
             </div>
-            <div className="text-xs font-mono text-accent-cyan">Team Lead & Systems Architecture</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <div className="text-xs font-mono text-sky-400 font-semibold">Team Lead & Systems Architecture</div>
+            <p className="text-[11px] text-slate-400">CASSIN X Research Contributor</p>
           </div>
 
-          <div className="p-4 bg-base/60 rounded-btn border border-border space-y-1">
-            <div className="font-heading font-semibold text-text-primary text-sm">
+          <div className="p-4 bg-slate-950/80 rounded-xl border border-white/10 space-y-1.5 backdrop-blur-md shadow-sm">
+            <div className="font-heading font-bold text-white text-sm">
               [TEAM MEMBER NAME]
             </div>
-            <div className="text-xs font-mono text-accent-blue">Geospatial & Planetary Science</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <div className="text-xs font-mono text-blue-400 font-semibold">Geospatial & Planetary Science</div>
+            <p className="text-[11px] text-slate-400">CASSIN X Research Contributor</p>
           </div>
 
-          <div className="p-4 bg-base/60 rounded-btn border border-border space-y-1">
-            <div className="font-heading font-semibold text-text-primary text-sm">
+          <div className="p-4 bg-slate-950/80 rounded-xl border border-white/10 space-y-1.5 backdrop-blur-md shadow-sm">
+            <div className="font-heading font-bold text-white text-sm">
               [TEAM MEMBER NAME]
             </div>
-            <div className="text-xs font-mono text-status-ok">Scientific Computing & Modeling</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <div className="text-xs font-mono text-emerald-400 font-semibold">Scientific Computing & Modeling</div>
+            <p className="text-[11px] text-slate-400">CASSIN X Research Contributor</p>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-text-muted">
+        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-slate-400">
           <div>
             Original Wordmarks & Branding • No NASA/ESA Logos
           </div>
-          <div className="text-text-primary font-semibold">
+          <div className="text-white font-semibold">
             Developed by CASSIN X
           </div>
         </div>

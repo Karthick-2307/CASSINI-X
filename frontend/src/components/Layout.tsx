@@ -19,9 +19,9 @@ export const Layout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-base text-text-primary starfield-bg selection:bg-accent-cyan/20 selection:text-accent-cyan">
+    <div className="min-h-screen flex flex-col bg-[#030712] text-slate-100 starfield-bg selection:bg-sky-500/30 selection:text-sky-200">
       {/* Sticky Top Navigation */}
-      <header className="sticky top-0 z-50 bg-base/90 backdrop-blur-md border-b border-border/80 transition-colors">
+      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-2xl transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo */}
           <Link to="/" className="shrink-0 group">
@@ -35,10 +35,10 @@ export const Layout: React.FC = () => {
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-btn text-xs font-medium tracking-wide transition-colors duration-fast ${
+                  `px-3 py-1.5 rounded-btn text-xs font-medium tracking-wide transition-all duration-fast ${
                     isActive
-                      ? "bg-panel text-accent-cyan border border-border/80 shadow-sm"
-                      : "text-text-muted hover:text-text-primary hover:bg-panel/50"
+                      ? "bg-white/10 text-sky-400 font-semibold border border-sky-400/30 shadow-glow"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`
                 }
               >
@@ -113,36 +113,36 @@ export const Layout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-panel/90 border-t border-border mt-16 py-10 text-sm text-text-muted">
+      <footer className="bg-black/90 backdrop-blur-xl border-t border-white/10 mt-16 py-10 text-sm text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-border">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
             <div className="space-y-2">
               <AstraXLogo size="md" />
-              <p className="text-xs text-text-muted max-w-md">
+              <p className="text-xs text-slate-400 max-w-md">
                 Discover Earth. Understand Other Worlds. Prepare for Exploration.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-4 text-xs font-mono">
-              <Link to="/" className="hover:text-accent-cyan transition-colors">Home</Link>
-              <Link to="/dashboard" className="hover:text-accent-cyan transition-colors">Dashboard</Link>
-              <Link to="/discovery" className="hover:text-accent-cyan transition-colors">Discovery</Link>
-              <Link to="/explorer" className="hover:text-accent-cyan transition-colors">Explorer</Link>
-              <Link to="/analysis" className="hover:text-accent-cyan transition-colors">Analysis</Link>
-              <Link to="/about" className="hover:text-accent-cyan transition-colors">About</Link>
+              <Link to="/" className="hover:text-sky-400 transition-colors">Home</Link>
+              <Link to="/dashboard" className="hover:text-sky-400 transition-colors">Dashboard</Link>
+              <Link to="/discovery" className="hover:text-sky-400 transition-colors">Discovery</Link>
+              <Link to="/explorer" className="hover:text-sky-400 transition-colors">Explorer</Link>
+              <Link to="/analysis" className="hover:text-sky-400 transition-colors">Analysis</Link>
+              <Link to="/about" className="hover:text-sky-400 transition-colors">About</Link>
             </div>
 
             <div className="flex flex-col items-start md:items-end space-y-1">
-              <span className="text-xs text-text-muted">Developed by</span>
+              <span className="text-xs text-slate-400">Developed by</span>
               <CassinXLogo />
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted/80 font-mono">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400/80 font-mono">
             <div>
               ASTRA-X • Platform Version 0.1.0 • Built for Planetary Science Research
             </div>
-            <div className="text-center sm:text-right text-[11px] max-w-xl text-text-muted/70">
+            <div className="text-center sm:text-right text-[11px] max-w-xl text-slate-400/70">
               ASTRA-X provides scientific decision support. Results are not certified for landing or habitation safety.
             </div>
           </div>

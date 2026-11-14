@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { getBasemapStyle, BasemapSelector } from "./map";
 
 export interface CandidateLocation {
   id: number;
@@ -21,46 +22,21 @@ export const EarthMap: React.FC<EarthMapProps> = ({
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [currentBasemapId, setCurrentBasemapId] = useState<string>("google-satellite");
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // CARTO Dark Matter raster basemap (Free, open tile style with proper attribution)
+    const style = getBasemapStyle("earth", currentBasemapId);
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          "carto-dark": {
-            type: "raster",
-            tiles: [
-              "https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png",
-              "https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png",
-              "https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png",
-            ],
-            tileSize: 256,
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-          },
-        },
-        layers: [
-          {
-            id: "carto-dark-layer",
-            type: "raster",
-            source: "carto-dark",
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
-      },
+      style,
       center: [15, 25], // Centered globally
       zoom: 1.5,
     });
 
-    // Add zoom/pan navigation control
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-
-    // Add scale bar
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
 
     mapRef.current = map;
@@ -71,7 +47,13 @@ export const EarthMap: React.FC<EarthMapProps> = ({
     };
   }, []);
 
-  // Scientific honesty: only render markers if real candidates exist
+  const handleSelectBasemap = (newBasemapId: string) => {
+    setCurrentBasemapId(newBasemapId);
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(getBasemapStyle("earth", newBasemapId));
+  };
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -106,15 +88,14 @@ export const EarthMap: React.FC<EarthMapProps> = ({
   }, [candidates]);
 
   return (
-    <div className={`relative w-full h-[400px] rounded-panel overflow-hidden border border-border bg-base ${className}`}>
-      <div ref={mapContainerRef} className="w-full h-full" />
-      {candidates.length === 0 && (
-        <div className="absolute top-4 left-4 z-10 pointer-events-none">
-          <span className="text-xs font-mono px-2.5 py-1 rounded bg-panel/90 text-text-muted border border-border backdrop-blur-sm">
-            0 candidate markers (No analyses active)
-          </span>
-        </div>
-      )}
+    <div className={`relative w-full rounded-panel overflow-hidden border border-border shadow-panel bg-[#070B14] ${className}`}>
+      {/* Basemap Imagery Switcher (Google Earth / NASA Blue Marble / CARTO) */}
+      <BasemapSelector
+        planet="earth"
+        currentBasemapId={currentBasemapId}
+        onSelectBasemap={handleSelectBasemap}
+      />
+      <div ref={mapContainerRef} className="w-full h-[400px]" />
     </div>
   );
 };
