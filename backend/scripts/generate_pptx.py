@@ -14,7 +14,7 @@ def create_deck(output_path):
 
     blank_slide_layout = prs.slide_layouts[6]
 
-    # Scientific Dark Theme Palette (ASTRA-X / CASSIN X)
+    # Scientific Dark Theme Palette (ASTRA-X / CASSINI-X)
     BG_DARK = RGBColor(11, 15, 23)        # #0B0F17
     SURFACE_DARK = RGBColor(17, 24, 38)   # #111826
     RAISED_DARK = RGBColor(22, 32, 51)    # #162033
@@ -116,7 +116,7 @@ def create_deck(output_path):
     p3.space_after = Pt(36)
 
     p4 = tf.add_paragraph()
-    p4.text = "Developed by Team CASSIN X  |  NASA & Open Planetary Science Standards"
+    p4.text = "Developed by Team CASSINI-X  |  NASA & Open Planetary Science Standards"
     p4.font.size = Pt(12)
     p4.font.bold = True
     p4.font.color.rgb = TEXT_MUTED
@@ -713,7 +713,7 @@ def create_deck(output_path):
         p.space_after = Pt(12)
 
     p_end = tf.add_paragraph()
-    p_end.text = "ASTRA-X  •  Developed by Team CASSIN X  •  NASA Space Apps & Open Planetary Standards"
+    p_end.text = "ASTRA-X  •  Developed by Team CASSINI-X  •  NASA Space Apps & Open Planetary Standards"
     p_end.font.size = Pt(11)
     p_end.font.italic = True
     p_end.font.color.rgb = TEXT_MUTED

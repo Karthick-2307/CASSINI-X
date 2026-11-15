@@ -1,7 +1,7 @@
 # ASTRA-X — Planetary Terrestrial Analog Discovery Platform
 
 **Tagline:** *Discover Earth. Understand Other Worlds. Prepare for Exploration.*  
-**Engineering Team:** **CASSIN X**  
+**Engineering Team:** **CASSINI-X**  
 **Core Mission:** Explainable, data-driven discovery and multi-attribute evaluation of terrestrial planetary analog environments.
 
 ---
@@ -224,4 +224,4 @@ uvicorn app.main:app --port 8000
 
 ## 10. License
 
-Developed by team **CASSIN X**. Open-source under the Apache License 2.0. Planetary datasets courtesy of NASA, USGS Astrogeology Science Center, and AWS Open Data Registry.
+Developed by team **CASSINI-X**. Open-source under the Apache License 2.0. Planetary datasets courtesy of NASA, USGS Astrogeology Science Center, and AWS Open Data Registry.

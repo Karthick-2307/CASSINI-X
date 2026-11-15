@@ -5,7 +5,7 @@ Uses reportlab and matplotlib to compile transparent, multi-section engineering
 and scientific analog reports.
 
 Sections:
-1. Title & Header (ASTRA-X, Developed by CASSIN X)
+1. Title & Header (ASTRA-X, Developed by CASSINI-X)
 2. Target Planetary Reference & Ingested Metadata
 3. Terrestrial Analog Candidate Rankings
 4. Independent Score Decomposition (Similarity vs Confidence vs Suitability)
@@ -126,10 +126,10 @@ def generate_pdf_report(
 
     story = []
 
-    # 1. Header Banner
+    # 1. Header Banner (ASTRA-X, Developed by CASSINI-X)
     story.append(Paragraph("ASTRA-X &mdash; Planetary Analog Discovery Report", title_style))
     story.append(Paragraph(
-        f"Developed by Team <b>CASSIN X</b> | Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | "
+        f"Developed by Team <b>CASSINI-X</b> | Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} | "
         f"Analysis Run #{analysis.id}",
         subtitle_style
     ))

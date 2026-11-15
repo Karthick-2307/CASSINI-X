@@ -1,7 +1,7 @@
 # ASTRA-X — System Architecture & Data Flow
 
 **Platform:** ASTRA-X ("Discover Earth. Understand Other Worlds. Prepare for Exploration.")  
-**Engineering Team:** CASSIN X  
+**Engineering Team:** CASSINI-X  
 
 ---
 

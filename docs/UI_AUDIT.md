@@ -1,7 +1,7 @@
 # ASTRA-X — UI Refactor Step 1: System & Interface Audit
 
 **Date:** 2026-11-14  
-**Team:** CASSIN X | **Platform:** ASTRA-X  
+**Team:** CASSINI-X | **Platform:** ASTRA-X  
 **Branch:** `ui-refactor`
 
 ---

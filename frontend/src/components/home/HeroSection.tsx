@@ -20,7 +20,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHowItWorks }
         <div className="max-w-2xl space-y-6 pt-4 lg:pt-8 text-left pointer-events-auto">
           <div className="space-y-1">
             <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#94A3B8] block">
-              CASSIN X • ASTRA-X PLATFORM
+              CASSINI-X • ASTRA-X PLATFORM
             </span>
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-sans font-black tracking-tight text-white uppercase leading-[0.92] drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
               DISCOVER<br />

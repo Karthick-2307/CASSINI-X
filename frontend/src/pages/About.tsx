@@ -199,7 +199,7 @@ export const About: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
           <div className="space-y-1">
             <h3 className="text-lg font-heading font-semibold text-text-primary">
-              The CASSIN X Team
+              The CASSINI-X Team
             </h3>
             <p className="text-xs text-text-muted">
               Originators and core developers of the ASTRA-X platform.
@@ -214,7 +214,7 @@ export const About: React.FC = () => {
               [TEAM MEMBER NAME]
             </div>
             <div className="text-[11px] text-accent font-medium">Team Lead & Systems Architecture</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <p className="text-[11px] text-text-muted">CASSINI-X Research Contributor</p>
           </div>
 
           <div className="p-4 bg-raised rounded border border-border space-y-1 font-sans">
@@ -222,7 +222,7 @@ export const About: React.FC = () => {
               [TEAM MEMBER NAME]
             </div>
             <div className="text-[11px] text-accent font-medium">Planetary Geology & Remote Sensing</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <p className="text-[11px] text-text-muted">CASSINI-X Research Contributor</p>
           </div>
 
           <div className="p-4 bg-raised rounded border border-border space-y-1 font-sans">
@@ -230,7 +230,7 @@ export const About: React.FC = () => {
               [TEAM MEMBER NAME]
             </div>
             <div className="text-[11px] text-accent font-medium">Algorithms & Spatial ML Engineering</div>
-            <p className="text-[11px] text-text-muted">CASSIN X Research Contributor</p>
+            <p className="text-[11px] text-text-muted">CASSINI-X Research Contributor</p>
           </div>
         </div>
       </Card>

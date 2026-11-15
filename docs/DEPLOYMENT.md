@@ -1,7 +1,7 @@
 # ASTRA-X — Deployment Preparation & Infrastructure Guide
 
 **Platform:** ASTRA-X  
-**Team:** CASSIN X  
+**Team:** CASSINI-X  
 
 ---
 

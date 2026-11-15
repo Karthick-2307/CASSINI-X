@@ -1,7 +1,7 @@
 # ASTRA-X — PART 0: MASTER RULES
 
 ## 0.1 What we are building
-**ASTRA-X** is a web application by team **CASSIN X**. It answers one research question:
+**ASTRA-X** is a web application by team **CASSINI-X**. It answers one research question:
 
 > "Given a selected region on Mars or the Moon, which locations on Earth have comparable terrain characteristics?"
 
@@ -98,8 +98,8 @@ astra-x/
 - Known variables: `ASTRAX_DEMO_MODE`, `DATABASE_URL`, `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`, `LLM_API_KEY` (optional), `LLM_MODEL` (optional).
 
 ## 0.9 Branding
-- Team: **CASSIN X**. Platform: **ASTRA-X**.
-- "Developed by CASSIN X" must appear in the footer and the About page.
+- Team: **CASSINI-X**. Platform: **ASTRA-X**.
+- "Developed by CASSINI-X" must appear in the footer and the About page.
 - Original text-based logos only. Do NOT use NASA, ESA or any agency logos or branding.
 
 ## 0.10 Phase map (do NOT build ahead)

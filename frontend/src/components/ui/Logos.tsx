@@ -44,9 +44,12 @@ export const AstraXLogo: React.FC<LogoProps> = ({ className = "", size = "md" })
 
 export const CassinXLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
   return (
-    <div className={`inline-flex items-center space-x-1 select-none font-sans text-xs tracking-wider text-text-muted ${className}`}>
-      <span>CASSIN</span>
+    <div className={`inline-flex items-center space-x-0.5 select-none font-sans text-xs tracking-wider text-text-muted ${className}`}>
+      <span>CASSINI</span>
+      <span className="text-text-muted">-</span>
       <span className="text-accent font-semibold">X</span>
     </div>
   );
 };
+
+export const CassiniXLogo = CassinXLogo;
