@@ -1,22 +1,24 @@
 import * as THREE from "three";
 import earthTextureUrl from "/textures/earth.jpg?url";
-import moonTextureUrl from "/textures/moon.jpg?url";
+import earthNormalUrl from "/textures/earth_normal.jpg?url";
+import earthSpecularUrl from "/textures/earth_specular.jpg?url";
 import cloudsTextureUrl from "/textures/earth_clouds.png?url";
+import moonTextureUrl from "/textures/moon.jpg?url";
 
 export class NASAThreeGlobeScene {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
 
-  // Earth horizon objects (wide Earth spanning the lower webpage)
+  // Earth horizon objects (wide NASA Blue Marble Earth spanning lower webpage)
   private earthGroup: THREE.Group;
   private earthMesh: THREE.Mesh;
   private cloudsMesh: THREE.Mesh;
   private atmosphereLimb: THREE.Mesh;
 
-  // Moon orbiting Earth in the sky
+  // Moon orbiting Earth in the space sky
   private moonMesh: THREE.Mesh;
-  private moonOrbitAngle: number = 0.35; // Start in upper-right sky
+  private moonOrbitAngle: number = 0.35;
 
   private textureCache: Map<string, THREE.Texture> = new Map();
   private textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
@@ -31,7 +33,7 @@ export class NASAThreeGlobeScene {
     this.scene = new THREE.Scene();
 
     // Perspective camera with wide view for the orbital horizon
-    this.camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+    this.camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
     this.camera.position.set(0, 0, 5.0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -44,67 +46,72 @@ export class NASAThreeGlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0); // 100% transparent deep space
 
-    // 1. Cosmic solar lighting
-    // Low ambient light for authentic high-contrast space darkness
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.09);
+    // 1. Balanced orbital solar lighting for photorealistic NASA Blue Marble
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.22);
     this.scene.add(ambientLight);
 
-    // Sunlight from the upper-right illuminating the Earth limb and casting the Moon phase
-    const sunLight = new THREE.DirectionalLight(0xfff8ee, 3.8);
-    sunLight.position.set(7.5, 3.5, 3.0);
+    // Key sunlight from the upper-right (creates natural terminator and specular reflection)
+    const sunLight = new THREE.DirectionalLight(0xfffaea, 2.8);
+    sunLight.position.set(7.5, 3.5, 3.5);
     this.scene.add(sunLight);
 
-    // Blue atmospheric light bouncing along the Earth's curved limb
-    const earthAtmosphereLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
-    earthAtmosphereLight.position.set(0, 2.0, 1.0);
-    this.scene.add(earthAtmosphereLight);
+    // Subtle blue atmospheric rim fill
+    const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 0.4);
+    blueRimLight.position.set(-4.0, 2.5, 1.0);
+    this.scene.add(blueRimLight);
 
-    // Preload textures
+    // Preload official NASA textures
     const earthTex = this.loadTexture(earthTextureUrl);
+    const earthNormalTex = this.loadTexture(earthNormalUrl);
+    const earthSpecularTex = this.loadTexture(earthSpecularUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
     const cloudsTex = this.loadTexture(cloudsTextureUrl);
 
     // ==========================================
-    // 2. WIDE EARTH HORIZON (spans bottom of screen like Apollo/Artemis photo)
+    // 2. WIDE NASA BLUE MARBLE EARTH HORIZON
     // ==========================================
     this.earthGroup = new THREE.Group();
     // Positioned low so its curved upper surface spans wide across the webpage
-    this.earthGroup.position.set(0.2, -4.0, 0.2);
+    this.earthGroup.position.set(0.1, -3.95, 0.2);
     // Real axial tilt of Earth (23.44°)
     this.earthGroup.rotation.z = THREE.MathUtils.degToRad(-15.0);
     this.earthGroup.rotation.x = THREE.MathUtils.degToRad(18.0);
     this.scene.add(this.earthGroup);
 
-    // Massive Earth sphere
+    // Photorealistic Earth sphere with NASA topography normal map & ocean specular map
     const earthRadius = 4.6;
     const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      roughness: 0.52,
-      metalness: 0.06,
+      normalMap: earthNormalTex,
+      normalScale: new THREE.Vector2(0.85, 0.85),
+      roughnessMap: earthSpecularTex,
+      roughness: 0.65,
+      metalness: 0.08,
     });
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     this.earthGroup.add(this.earthMesh);
 
-    // Swirling clouds layer with parallax
-    const cloudsGeo = new THREE.SphereGeometry(earthRadius + 0.025, 128, 128);
+    // Realistic delicate NASA cloud layer with atmospheric parallax
+    const cloudsGeo = new THREE.SphereGeometry(earthRadius + 0.02, 128, 128);
     const cloudsMat = new THREE.MeshStandardMaterial({
       map: cloudsTex,
       transparent: true,
-      opacity: 0.86,
+      opacity: 0.55, // Translucent clouds so Blue Marble continents and oceans shine through
       blending: THREE.NormalBlending,
-      roughness: 0.9,
+      roughness: 0.95,
+      metalness: 0.0,
     });
     this.cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
     this.earthGroup.add(this.cloudsMesh);
 
-    // Atmospheric Blue Horizon Glow Ring
-    const atmosGeo = new THREE.SphereGeometry(earthRadius + 0.045, 96, 96);
+    // Glowing Atmospheric Limb Ring (AdditiveBlending to prevent dark borders)
+    const atmosGeo = new THREE.SphereGeometry(earthRadius + 0.035, 96, 96);
     const atmosMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.16,
-      side: THREE.BackSide,
+      opacity: 0.15,
+      blending: THREE.AdditiveBlending,
     });
     this.atmosphereLimb = new THREE.Mesh(atmosGeo, atmosMat);
     this.earthGroup.add(this.atmosphereLimb);
@@ -116,11 +123,10 @@ export class NASAThreeGlobeScene {
     const moonGeo = new THREE.SphereGeometry(moonRadius, 96, 96);
     const moonMat = new THREE.MeshStandardMaterial({
       map: moonTex,
-      roughness: 0.95,
+      roughness: 0.94,
       metalness: 0.0,
     });
     this.moonMesh = new THREE.Mesh(moonGeo, moonMat);
-    // Initial position in upper-right sky above Earth horizon
     this.updateMoonPosition();
     this.scene.add(this.moonMesh);
 
@@ -140,7 +146,6 @@ export class NASAThreeGlobeScene {
     const z = Math.sin(this.moonOrbitAngle) * 0.8 - 0.2;
 
     this.moonMesh.position.set(x, y, z);
-    // Synchronous tidal rotation facing Earth
     this.moonMesh.rotation.y = this.moonOrbitAngle + Math.PI;
   }
 
@@ -224,8 +229,8 @@ export class NASAThreeGlobeScene {
         // 1. Earth rotates on its own axis
         this.earthMesh.rotation.y += earthBaseSpeed * this.speedFactor;
 
-        // 2. Clouds have dynamic atmospheric parallax drift
-        this.cloudsMesh.rotation.y += earthBaseSpeed * this.speedFactor * 1.16;
+        // 2. Delicate cloud parallax drift
+        this.cloudsMesh.rotation.y += earthBaseSpeed * this.speedFactor * 1.15;
 
         // 3. Moon orbits around Earth in the space sky
         this.moonOrbitAngle += moonOrbitSpeed * this.speedFactor;
