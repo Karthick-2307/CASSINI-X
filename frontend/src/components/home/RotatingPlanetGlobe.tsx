@@ -13,7 +13,6 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
   activePlanet = "mars",
   className = "",
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<NASAThreeGlobeScene | null>(null);
 
@@ -21,8 +20,8 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // High-resolution canvas size (SpaceX cinematic scale)
-    const size = 720;
+    // High resolution canvas buffer for smooth spherical rendering
+    const size = 600;
     const scene = new NASAThreeGlobeScene(canvas, size, size);
     sceneRef.current = scene;
 
@@ -32,7 +31,7 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
       scene.setRotation(false);
     } else {
       scene.setRotation(true);
-      scene.setSpeed(0.65); // Majestic cinematic slow rotation
+      scene.setSpeed(0.7); // Majestic slow rotation
     }
 
     const handleMotionChange = (e: MediaQueryListEvent) => {
@@ -55,14 +54,13 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
 
   return (
     <div
-      ref={containerRef}
       className={`relative w-full flex items-center justify-center select-none ${className}`}
     >
       <canvas
         ref={canvasRef}
-        width={720}
-        height={720}
-        className="w-[360px] h-[360px] sm:w-[500px] sm:h-[500px] md:w-[600px] md:h-[600px] lg:w-[720px] lg:h-[720px] max-w-none touch-none cursor-grab active:cursor-grabbing drop-shadow-[0_0_50px_rgba(249,115,22,0.12)]"
+        width={600}
+        height={600}
+        className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] md:w-[500px] md:h-[500px] lg:w-[580px] lg:h-[580px] touch-none cursor-grab active:cursor-grabbing bg-transparent"
         aria-label={`Interactive 3D representation of ${activePlanet}`}
       />
     </div>
