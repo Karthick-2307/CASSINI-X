@@ -1,8 +1,5 @@
 import * as THREE from "three";
 import earthTextureUrl from "/textures/earth.jpg?url";
-import earthNormalUrl from "/textures/earth_normal.jpg?url";
-import earthSpecularUrl from "/textures/earth_specular.jpg?url";
-import cloudsTextureUrl from "/textures/earth_clouds.png?url";
 import moonTextureUrl from "/textures/moon.jpg?url";
 
 export class NASAThreeGlobeScene {
@@ -10,10 +7,9 @@ export class NASAThreeGlobeScene {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
 
-  // Earth horizon objects (wide NASA Blue Marble Earth spanning lower webpage)
+  // Earth horizon objects (wide NASA Blue Marble Shaded Relief Earth spanning lower webpage)
   private earthGroup: THREE.Group;
   private earthMesh: THREE.Mesh;
-  private cloudsMesh: THREE.Mesh;
   private atmosphereLimb: THREE.Mesh;
 
   // Moon orbiting Earth in the space sky
@@ -46,29 +42,26 @@ export class NASAThreeGlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0); // 100% transparent deep space
 
-    // 1. Balanced orbital solar lighting for photorealistic NASA Blue Marble
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.22);
+    // 1. High-contrast cosmic solar lighting for vivid NASA Blue Marble land & ocean features
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.42);
     this.scene.add(ambientLight);
 
-    // Key sunlight from the upper-right (creates natural terminator and specular reflection)
-    const sunLight = new THREE.DirectionalLight(0xfffaea, 2.8);
-    sunLight.position.set(7.5, 3.5, 3.5);
+    // Direct crisp white sunlight from the upper-right
+    const sunLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    sunLight.position.set(6.5, 3.5, 3.5);
     this.scene.add(sunLight);
 
-    // Subtle blue atmospheric rim fill
-    const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 0.4);
-    blueRimLight.position.set(-4.0, 2.5, 1.0);
+    // Subtle blue atmospheric rim fill on the limb
+    const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+    blueRimLight.position.set(-3.5, 2.0, 1.0);
     this.scene.add(blueRimLight);
 
-    // Preload official NASA textures
+    // Preload textures: NASA Blue Marble Bathymetry (cloud-free, high contrast) and Moon
     const earthTex = this.loadTexture(earthTextureUrl);
-    const earthNormalTex = this.loadTexture(earthNormalUrl);
-    const earthSpecularTex = this.loadTexture(earthSpecularUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
-    const cloudsTex = this.loadTexture(cloudsTextureUrl);
 
     // ==========================================
-    // 2. WIDE NASA BLUE MARBLE EARTH HORIZON
+    // 2. WIDE NASA BLUE MARBLE EARTH HORIZON (CLOUD-FREE, HIGH CONTRAST)
     // ==========================================
     this.earthGroup = new THREE.Group();
     // Positioned low so its curved upper surface spans wide across the webpage
@@ -78,39 +71,23 @@ export class NASAThreeGlobeScene {
     this.earthGroup.rotation.x = THREE.MathUtils.degToRad(18.0);
     this.scene.add(this.earthGroup);
 
-    // Photorealistic Earth sphere with NASA topography normal map & ocean specular map
+    // High-contrast cloudless Earth sphere: deep royal navy oceans, vibrant terrain relief
     const earthRadius = 4.6;
     const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      normalMap: earthNormalTex,
-      normalScale: new THREE.Vector2(0.85, 0.85),
-      roughnessMap: earthSpecularTex,
-      roughness: 0.65,
-      metalness: 0.08,
+      roughness: 0.38,
+      metalness: 0.04,
     });
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     this.earthGroup.add(this.earthMesh);
-
-    // Realistic delicate NASA cloud layer with atmospheric parallax
-    const cloudsGeo = new THREE.SphereGeometry(earthRadius + 0.02, 128, 128);
-    const cloudsMat = new THREE.MeshStandardMaterial({
-      map: cloudsTex,
-      transparent: true,
-      opacity: 0.55, // Translucent clouds so Blue Marble continents and oceans shine through
-      blending: THREE.NormalBlending,
-      roughness: 0.95,
-      metalness: 0.0,
-    });
-    this.cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
-    this.earthGroup.add(this.cloudsMesh);
 
     // Glowing Atmospheric Limb Ring (AdditiveBlending to prevent dark borders)
     const atmosGeo = new THREE.SphereGeometry(earthRadius + 0.035, 96, 96);
     const atmosMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.16,
       blending: THREE.AdditiveBlending,
     });
     this.atmosphereLimb = new THREE.Mesh(atmosGeo, atmosMat);
@@ -191,7 +168,6 @@ export class NASAThreeGlobeScene {
 
       // Drag to rotate Earth and advance Moon orbit
       this.earthMesh.rotation.y += dx * 0.006;
-      this.cloudsMesh.rotation.y += dx * 0.006;
       this.moonOrbitAngle += dx * 0.002;
       this.updateMoonPosition();
 
@@ -226,13 +202,10 @@ export class NASAThreeGlobeScene {
 
     const animate = () => {
       if (this.isRotating && !this.isDragging) {
-        // 1. Earth rotates on its own axis
+        // 1. Earth rotates smoothly on its axis with clear landmasses and bathymetry
         this.earthMesh.rotation.y += earthBaseSpeed * this.speedFactor;
 
-        // 2. Delicate cloud parallax drift
-        this.cloudsMesh.rotation.y += earthBaseSpeed * this.speedFactor * 1.15;
-
-        // 3. Moon orbits around Earth in the space sky
+        // 2. Moon orbits around Earth in the space sky
         this.moonOrbitAngle += moonOrbitSpeed * this.speedFactor;
         this.updateMoonPosition();
       }
@@ -249,7 +222,6 @@ export class NASAThreeGlobeScene {
       cancelAnimationFrame(this.animFrameId);
     }
     this.earthMesh.geometry.dispose();
-    this.cloudsMesh.geometry.dispose();
     this.atmosphereLimb.geometry.dispose();
     this.moonMesh.geometry.dispose();
     this.textureCache.forEach((tex) => tex.dispose());
