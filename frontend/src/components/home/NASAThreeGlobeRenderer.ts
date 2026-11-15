@@ -7,7 +7,7 @@ export class NASAThreeGlobeScene {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
 
-  // Earth horizon objects (wide NASA Blue Marble Shaded Relief Earth spanning lower webpage)
+  // Earth horizon objects (wide Google Earth / NASA high-contrast satellite Earth)
   private earthGroup: THREE.Group;
   private earthMesh: THREE.Mesh;
   private atmosphereLimb: THREE.Mesh;
@@ -42,26 +42,27 @@ export class NASAThreeGlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0); // 100% transparent deep space
 
-    // 1. High-contrast cosmic solar lighting for vivid NASA Blue Marble land & ocean features
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.42);
+    // 1. High-contrast space lighting: deep dark navy oceans and rich, vibrant land
+    // Low ambient light so oceans stay dark and deep instead of washed out
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
     this.scene.add(ambientLight);
 
-    // Direct crisp white sunlight from the upper-right
-    const sunLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    sunLight.position.set(6.5, 3.5, 3.5);
+    // Warm directional sunlight from upper-right
+    const sunLight = new THREE.DirectionalLight(0xfff8ee, 2.8);
+    sunLight.position.set(6.5, 3.5, 3.2);
     this.scene.add(sunLight);
 
-    // Subtle blue atmospheric rim fill on the limb
-    const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
-    blueRimLight.position.set(-3.5, 2.0, 1.0);
-    this.scene.add(blueRimLight);
+    // Subtle edge rim light placed behind the limb to highlight atmospheric curvature
+    const rimBackLight = new THREE.DirectionalLight(0x38bdf8, 0.22);
+    rimBackLight.position.set(-6.0, 3.0, -2.5);
+    this.scene.add(rimBackLight);
 
-    // Preload textures: NASA Blue Marble Bathymetry (cloud-free, high contrast) and Moon
+    // Preload textures: Google Earth / NASA satellite map (cloud-free, high contrast) and Moon
     const earthTex = this.loadTexture(earthTextureUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
 
     // ==========================================
-    // 2. WIDE NASA BLUE MARBLE EARTH HORIZON (CLOUD-FREE, HIGH CONTRAST)
+    // 2. WIDE GOOGLE EARTH SATELLITE HORIZON (HIGH CONTRAST, DEEP OCEANS)
     // ==========================================
     this.earthGroup = new THREE.Group();
     // Positioned low so its curved upper surface spans wide across the webpage
@@ -71,13 +72,13 @@ export class NASAThreeGlobeScene {
     this.earthGroup.rotation.x = THREE.MathUtils.degToRad(18.0);
     this.scene.add(this.earthGroup);
 
-    // High-contrast cloudless Earth sphere: deep royal navy oceans, vibrant terrain relief
+    // High-contrast Earth sphere: deep royal navy oceans, vibrant terrain relief
     const earthRadius = 4.6;
     const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      roughness: 0.38,
-      metalness: 0.04,
+      roughness: 0.72,
+      metalness: 0.0,
     });
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     this.earthGroup.add(this.earthMesh);
@@ -87,7 +88,7 @@ export class NASAThreeGlobeScene {
     const atmosMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.12,
       blending: THREE.AdditiveBlending,
     });
     this.atmosphereLimb = new THREE.Mesh(atmosGeo, atmosMat);
@@ -202,7 +203,7 @@ export class NASAThreeGlobeScene {
 
     const animate = () => {
       if (this.isRotating && !this.isDragging) {
-        // 1. Earth rotates smoothly on its axis with clear landmasses and bathymetry
+        // 1. Earth rotates smoothly on its axis with clear landmasses and dark oceans
         this.earthMesh.rotation.y += earthBaseSpeed * this.speedFactor;
 
         // 2. Moon orbits around Earth in the space sky
