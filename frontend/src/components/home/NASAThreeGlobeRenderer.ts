@@ -47,19 +47,19 @@ export class NASAThreeGlobeScene {
     // Enable ACES Filmic Tone Mapping and sRGB color space for rich contrast and deep blacks
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.0;
 
-    // 1. High-contrast space lighting: deep natural navy oceans and rich, vivid land
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.16);
+    // 1. Natural space lighting: balanced ambient light so oceans are not overly dark, with warm sunlight
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.26);
     this.scene.add(ambientLight);
 
     // Warm directional sunlight from upper-right
-    const sunLight = new THREE.DirectionalLight(0xfff6ea, 2.6);
+    const sunLight = new THREE.DirectionalLight(0xfff6ea, 2.3);
     sunLight.position.set(6.0, 3.5, 3.5);
     this.scene.add(sunLight);
 
-    // Subtle edge rim light placed behind the limb to highlight atmospheric curvature
-    const rimBackLight = new THREE.DirectionalLight(0x38bdf8, 0.25);
+    // Soft atmospheric rim light placed behind the limb
+    const rimBackLight = new THREE.DirectionalLight(0xe0f2fe, 0.18);
     rimBackLight.position.set(-5.5, 3.5, -2.5);
     this.scene.add(rimBackLight);
 
