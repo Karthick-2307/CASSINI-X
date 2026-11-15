@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { CandidateMatch } from "../../api/client";
 import { getAnalogSiteImage } from "../../lib/analogImages";
+import { getBasemapStyle } from "../map/mapStyles";
 import { Badge, Button } from "../ui";
 
 export interface LocationImagePopoutProps {
@@ -20,18 +23,98 @@ export const LocationImagePopout: React.FC<LocationImagePopoutProps> = ({
 }) => {
   const analogImg = getAnalogSiteImage(candidate.location_name, candidate.lat, candidate.lon);
 
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
+
+  const [viewMode, setViewMode] = useState<"interactive" | "tile">("interactive");
+  const [pitch, setPitch] = useState<number>(35);
+
   const googleEarthUrl = `https://earth.google.com/web/@${candidate.lat},${candidate.lon},0a,5000d,35y,0h,0t,0r`;
-  const googleMapsUrl = `https://www.google.com/maps/@${candidate.lat},${candidate.lon},15z/data=!3m1!1e3`;
+  const googleMapsUrl = `https://www.google.com/maps/@${candidate.lat},${candidate.lon},14z/data=!3m1!1e3`;
+
+  // Initialize and update MapLibre satellite viewport for the selected analog candidate
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapRef.current) {
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: getBasemapStyle("earth", "google-satellite"),
+        center: [candidate.lon, candidate.lat],
+        zoom: 12.5,
+        pitch: pitch,
+        bearing: 0,
+        attributionControl: false,
+      });
+
+      // Center crosshair marker
+      const el = document.createElement("div");
+      el.className = "analog-target-reticle";
+      el.innerHTML = `
+        <div style="position: relative; display: flex; items: center; justify-content: center; pointer-events: none;">
+          <div style="width: 32px; height: 32px; border: 2px solid #38BDF8; border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; opacity: 0.6; position: absolute;"></div>
+          <div style="width: 14px; height: 14px; background-color: #38BDF8; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 0 10px #38BDF8; position: relative;"></div>
+        </div>
+      `;
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([candidate.lon, candidate.lat])
+        .addTo(map);
+
+      markerRef.current = marker;
+      mapRef.current = map;
+    } else {
+      mapRef.current.flyTo({
+        center: [candidate.lon, candidate.lat],
+        zoom: 12.5,
+        pitch: pitch,
+        essential: true,
+      });
+
+      if (markerRef.current) {
+        markerRef.current.setLngLat([candidate.lon, candidate.lat]);
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount
+    };
+  }, [candidate.lat, candidate.lon]);
+
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleZoom = (delta: number) => {
+    if (mapRef.current) {
+      mapRef.current.zoomTo(mapRef.current.getZoom() + delta);
+    }
+  };
+
+  const handleTogglePitch = () => {
+    if (mapRef.current) {
+      const nextPitch = pitch === 0 ? 45 : 0;
+      setPitch(nextPitch);
+      mapRef.current.easeTo({ pitch: nextPitch });
+    }
+  };
 
   return (
     <div className="relative bg-[#111826] border-2 border-[#38BDF8]/60 rounded-card p-4 sm:p-5 shadow-2xl animate-fadeIn space-y-4">
-      {/* Header with Title, Similarity Badge & Close */}
+      {/* Header with Title, Similarity Badge & Direct External Links */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#243044]">
         <div>
           <div className="flex items-center space-x-2">
             <span className="text-xs font-mono font-bold text-[#38BDF8] uppercase tracking-wider flex items-center space-x-1.5">
-              <span>📍</span>
-              <span>Matched Terrestrial Analog Observation</span>
+              <span>🛰️</span>
+              <span>Matched Orbital Satellite Observation</span>
             </span>
             <Badge variant="active">
               {candidate.similarity.toFixed(1)}% Physical Match
@@ -77,20 +160,91 @@ export const LocationImagePopout: React.FC<LocationImagePopoutProps> = ({
         </div>
       </div>
 
-      {/* Main Image Grid Showcase */}
+      {/* Main Showcase Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        {/* Left Column: High-Res Location Imagery */}
+        {/* Left Column: Real Satellite Observation (MapLibre Live View + Satellite Imagery) */}
         <div className="lg:col-span-7 space-y-2">
-          <div className="relative rounded-card overflow-hidden border border-[#243044] bg-[#070B14] shadow-lg group">
-            <img
-              src={analogImg.primarySatelliteUrl}
-              alt={candidate.location_name}
-              className="w-full h-64 sm:h-72 object-cover transition-transform duration-500 group-hover:scale-105"
+          <div className="relative rounded-card overflow-hidden border border-[#243044] bg-[#070B14] shadow-lg h-72 sm:h-80">
+            {/* View Mode Toggle Controls */}
+            <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-1.5 bg-[#0B0F19]/85 backdrop-blur-md p-1 rounded border border-[#243044]">
+              <button
+                type="button"
+                onClick={() => setViewMode("interactive")}
+                className={`px-2 py-0.5 text-[10px] font-mono rounded transition-colors ${
+                  viewMode === "interactive"
+                    ? "bg-[#38BDF8] text-[#0B0F19] font-bold"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Interactive Satellite View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("tile")}
+                className={`px-2 py-0.5 text-[10px] font-mono rounded transition-colors ${
+                  viewMode === "tile"
+                    ? "bg-[#38BDF8] text-[#0B0F19] font-bold"
+                    : "text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Direct Tile Observation
+              </button>
+            </div>
+
+            {/* Interactive Navigation Overlay (Zoom In, Zoom Out, 3D Tilt) */}
+            {viewMode === "interactive" && (
+              <div className="absolute top-2.5 right-2.5 z-10 flex flex-col space-y-1">
+                <button
+                  type="button"
+                  onClick={() => handleZoom(1)}
+                  className="w-7 h-7 bg-[#0B0F19]/85 hover:bg-[#162033] border border-[#243044] text-[#F8FAFC] font-mono font-bold text-sm rounded flex items-center justify-center transition-colors shadow"
+                  title="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleZoom(-1)}
+                  className="w-7 h-7 bg-[#0B0F19]/85 hover:bg-[#162033] border border-[#243044] text-[#F8FAFC] font-mono font-bold text-sm rounded flex items-center justify-center transition-colors shadow"
+                  title="Zoom Out"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTogglePitch}
+                  className="px-1.5 h-7 bg-[#0B0F19]/85 hover:bg-[#162033] border border-[#243044] text-[#38BDF8] font-mono text-[10px] rounded flex items-center justify-center transition-colors shadow"
+                  title="Toggle 3D Tilt"
+                >
+                  3D
+                </button>
+              </div>
+            )}
+
+            {/* Interactive Satellite Canvas Container */}
+            <div
+              ref={mapContainerRef}
+              className={`w-full h-full ${viewMode === "interactive" ? "block" : "hidden"}`}
             />
-            {/* Overlay gradient & attribution */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 flex flex-col justify-end">
+
+            {/* Fallback / Static High-Resolution Satellite Tile Image */}
+            {viewMode === "tile" && (
+              <div className="w-full h-full relative group">
+                <img
+                  src={analogImg.primarySatelliteUrl}
+                  alt={candidate.location_name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+            )}
+
+            {/* Bottom Overlay Gradient & Scientific Metadata */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-3 pointer-events-none flex flex-col justify-end">
               <div className="flex items-center justify-between text-xs font-mono text-[#F8FAFC]">
-                <span className="font-semibold">{candidate.location_name}</span>
+                <span className="font-semibold flex items-center space-x-1.5">
+                  <span className="text-[#34D399]">●</span>
+                  <span>{candidate.location_name}</span>
+                </span>
                 <span className="text-[#38BDF8] font-bold">{analogImg.resolution}</span>
               </div>
               <div className="text-[11px] font-mono text-[#94A3B8] mt-0.5 truncate">
@@ -105,7 +259,7 @@ export const LocationImagePopout: React.FC<LocationImagePopoutProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Comparison with Target Observation & Terrain Metrics */}
+        {/* Right Column: Comparison with Planetary Target & Morphometrics */}
         <div className="lg:col-span-5 flex flex-col justify-between space-y-3">
           {/* Target Comparison Tile */}
           <div className="p-3 rounded-card bg-[#162033] border border-[#243044] space-y-2">
