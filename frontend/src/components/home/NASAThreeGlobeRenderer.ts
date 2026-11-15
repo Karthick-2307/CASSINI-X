@@ -1,36 +1,27 @@
 import * as THREE from "three";
 import earthTextureUrl from "/textures/earth.jpg?url";
-import marsTextureUrl from "/textures/mars.jpg?url";
 import moonTextureUrl from "/textures/moon.jpg?url";
 import cloudsTextureUrl from "/textures/earth_clouds.png?url";
-
-export type GlobeViewMode = "earthrise" | "mars" | "earth" | "moon";
 
 export class NASAThreeGlobeScene {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
 
-  // Earthrise mode objects (Apollo / Artemis Moon-to-Earth view)
-  private earthriseGroup: THREE.Group;
-  private moonHorizonMesh: THREE.Mesh;
-  private distantEarthGroup: THREE.Group;
-  private distantEarthMesh: THREE.Mesh;
-  private distantCloudsMesh: THREE.Mesh;
+  // Earth horizon objects (wide Earth spanning the lower webpage)
+  private earthGroup: THREE.Group;
+  private earthMesh: THREE.Mesh;
+  private cloudsMesh: THREE.Mesh;
+  private atmosphereLimb: THREE.Mesh;
 
-  // Single planet mode objects (Mars / Earth / Moon standalone)
-  private singlePlanetGroup: THREE.Group;
-  private singlePlanetMesh: THREE.Mesh;
-  private singleCloudsMesh: THREE.Mesh;
+  // Moon orbiting Earth in the sky
+  private moonMesh: THREE.Mesh;
+  private moonOrbitAngle: number = 0.35; // Start in upper-right sky
 
   private textureCache: Map<string, THREE.Texture> = new Map();
   private textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
 
-  private sunLight: THREE.DirectionalLight;
-  private earthGlowLight: THREE.PointLight;
-
   private animFrameId: number | null = null;
-  private currentMode: GlobeViewMode = "earthrise";
   private isRotating: boolean = true;
   private speedFactor: number = 1.0;
   private isDragging: boolean = false;
@@ -39,8 +30,8 @@ export class NASAThreeGlobeScene {
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.scene = new THREE.Scene();
 
-    // Perspective camera
-    this.camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
+    // Perspective camera with wide view for the orbital horizon
+    this.camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
     this.camera.position.set(0, 0, 5.0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -53,98 +44,104 @@ export class NASAThreeGlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0); // 100% transparent deep space
 
-    // 1. Cosmic solar lighting (Apollo 8 / Artemis Earthrise illumination)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.08);
+    // 1. Cosmic solar lighting
+    // Low ambient light for authentic high-contrast space darkness
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.09);
     this.scene.add(ambientLight);
 
-    // Directional sunlight coming from the right / upper-right (matches uploaded image crescent)
-    this.sunLight = new THREE.DirectionalLight(0xfff8ee, 3.8);
-    this.sunLight.position.set(6.5, 2.2, 2.8);
-    this.scene.add(this.sunLight);
+    // Sunlight from the upper-right illuminating the Earth limb and casting the Moon phase
+    const sunLight = new THREE.DirectionalLight(0xfff8ee, 3.8);
+    sunLight.position.set(7.5, 3.5, 3.0);
+    this.scene.add(sunLight);
 
-    // Subtle blue atmospheric glow from Earth
-    this.earthGlowLight = new THREE.PointLight(0x38bdf8, 0.4, 10);
-    this.earthGlowLight.position.set(0.9, 0.7, -0.4);
-    this.scene.add(this.earthGlowLight);
+    // Blue atmospheric light bouncing along the Earth's curved limb
+    const earthAtmosphereLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+    earthAtmosphereLight.position.set(0, 2.0, 1.0);
+    this.scene.add(earthAtmosphereLight);
 
     // Preload textures
     const earthTex = this.loadTexture(earthTextureUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
-    const marsTex = this.loadTexture(marsTextureUrl);
     const cloudsTex = this.loadTexture(cloudsTextureUrl);
 
     // ==========================================
-    // 2. EARTHRISE SCENE (Moon in foreground, rotating Earth in background)
+    // 2. WIDE EARTH HORIZON (spans bottom of screen like Apollo/Artemis photo)
     // ==========================================
-    this.earthriseGroup = new THREE.Group();
-    this.scene.add(this.earthriseGroup);
+    this.earthGroup = new THREE.Group();
+    // Positioned low so its curved upper surface spans wide across the webpage
+    this.earthGroup.position.set(0.2, -4.0, 0.2);
+    // Real axial tilt of Earth (23.44°)
+    this.earthGroup.rotation.z = THREE.MathUtils.degToRad(-15.0);
+    this.earthGroup.rotation.x = THREE.MathUtils.degToRad(18.0);
+    this.scene.add(this.earthGroup);
 
-    // A. Massive Moon horizon in foreground with detailed craters
-    const moonGeo = new THREE.SphereGeometry(3.2, 96, 96);
-    const moonMat = new THREE.MeshStandardMaterial({
-      map: moonTex,
-      roughness: 0.96,
-      metalness: 0.0,
-    });
-    this.moonHorizonMesh = new THREE.Mesh(moonGeo, moonMat);
-    // Positioned so the cratered lunar horizon curves diagonally across the lower section
-    this.moonHorizonMesh.position.set(-1.6, -2.4, 0.5);
-    this.moonHorizonMesh.rotation.x = 0.35;
-    this.moonHorizonMesh.rotation.y = 1.1;
-    this.earthriseGroup.add(this.moonHorizonMesh);
-
-    // B. Distant rotating Earth floating in deep space
-    this.distantEarthGroup = new THREE.Group();
-    this.distantEarthGroup.position.set(0.95, 0.7, -0.6);
-    // Physical axial tilt of Earth
-    this.distantEarthGroup.rotation.z = THREE.MathUtils.degToRad(23.44);
-    this.earthriseGroup.add(this.distantEarthGroup);
-
-    const earthGeo = new THREE.SphereGeometry(0.85, 96, 96);
+    // Massive Earth sphere
+    const earthRadius = 4.6;
+    const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      roughness: 0.5,
-      metalness: 0.08,
+      roughness: 0.52,
+      metalness: 0.06,
     });
-    this.distantEarthMesh = new THREE.Mesh(earthGeo, earthMat);
-    this.distantEarthGroup.add(this.distantEarthMesh);
+    this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    this.earthGroup.add(this.earthMesh);
 
-    // Clouds for distant Earth
-    const cloudsGeo = new THREE.SphereGeometry(0.862, 80, 80);
+    // Swirling clouds layer with parallax
+    const cloudsGeo = new THREE.SphereGeometry(earthRadius + 0.025, 128, 128);
     const cloudsMat = new THREE.MeshStandardMaterial({
       map: cloudsTex,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.86,
       blending: THREE.NormalBlending,
       roughness: 0.9,
     });
-    this.distantCloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
-    this.distantEarthGroup.add(this.distantCloudsMesh);
+    this.cloudsMesh = new THREE.Mesh(cloudsGeo, cloudsMat);
+    this.earthGroup.add(this.cloudsMesh);
+
+    // Atmospheric Blue Horizon Glow Ring
+    const atmosGeo = new THREE.SphereGeometry(earthRadius + 0.045, 96, 96);
+    const atmosMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.BackSide,
+    });
+    this.atmosphereLimb = new THREE.Mesh(atmosGeo, atmosMat);
+    this.earthGroup.add(this.atmosphereLimb);
 
     // ==========================================
-    // 3. STANDALONE SINGLE PLANET SCENE (for Mars / Earth / Moon standalone views)
+    // 3. SPHERICAL MOON IN THE SKY (orbiting around Earth)
     // ==========================================
-    this.singlePlanetGroup = new THREE.Group();
-    this.singlePlanetGroup.visible = false;
-    this.scene.add(this.singlePlanetGroup);
-
-    const singleGeo = new THREE.SphereGeometry(1.25, 96, 96);
-    const singleMat = new THREE.MeshStandardMaterial({
-      map: marsTex,
-      roughness: 0.82,
+    const moonRadius = 0.65;
+    const moonGeo = new THREE.SphereGeometry(moonRadius, 96, 96);
+    const moonMat = new THREE.MeshStandardMaterial({
+      map: moonTex,
+      roughness: 0.95,
       metalness: 0.0,
     });
-    this.singlePlanetMesh = new THREE.Mesh(singleGeo, singleMat);
-    this.singlePlanetGroup.add(this.singlePlanetMesh);
-
-    const singleCloudsGeo = new THREE.SphereGeometry(1.262, 80, 80);
-    this.singleCloudsMesh = new THREE.Mesh(singleCloudsGeo, cloudsMat);
-    this.singleCloudsMesh.visible = false;
-    this.singlePlanetGroup.add(this.singleCloudsMesh);
+    this.moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    // Initial position in upper-right sky above Earth horizon
+    this.updateMoonPosition();
+    this.scene.add(this.moonMesh);
 
     this.setupInteractivity(canvas);
-    this.setMode("earthrise");
     this.startLoop();
+  }
+
+  private updateMoonPosition(): void {
+    // Orbital path: sweeps through the sky in the upper-right quadrant
+    const radiusX = 2.4;
+    const radiusY = 0.45;
+    const centerX = 0.4;
+    const centerY = 1.35;
+
+    const x = centerX + Math.cos(this.moonOrbitAngle) * radiusX;
+    const y = centerY + Math.sin(this.moonOrbitAngle) * radiusY;
+    const z = Math.sin(this.moonOrbitAngle) * 0.8 - 0.2;
+
+    this.moonMesh.position.set(x, y, z);
+    // Synchronous tidal rotation facing Earth
+    this.moonMesh.rotation.y = this.moonOrbitAngle + Math.PI;
   }
 
   private loadTexture(url: string): THREE.Texture {
@@ -160,54 +157,6 @@ export class NASAThreeGlobeScene {
     }
     this.textureCache.set(url, tex);
     return tex;
-  }
-
-  public setMode(mode: GlobeViewMode): void {
-    this.currentMode = mode;
-
-    if (mode === "earthrise") {
-      this.earthriseGroup.visible = true;
-      this.singlePlanetGroup.visible = false;
-      this.sunLight.position.set(6.5, 2.2, 2.8);
-      this.sunLight.intensity = 3.8;
-      this.earthGlowLight.intensity = 0.4;
-    } else {
-      this.earthriseGroup.visible = false;
-      this.singlePlanetGroup.visible = true;
-      this.earthGlowLight.intensity = 0.0;
-
-      if (mode === "mars") {
-        this.sunLight.position.set(-5.5, 1.8, 3.5);
-        this.sunLight.intensity = 3.4;
-        this.singlePlanetGroup.rotation.z = THREE.MathUtils.degToRad(25.19);
-        this.singlePlanetMesh.material = new THREE.MeshStandardMaterial({
-          map: this.textureCache.get(marsTextureUrl),
-          roughness: 0.82,
-          metalness: 0.0,
-        });
-        this.singleCloudsMesh.visible = false;
-      } else if (mode === "earth") {
-        this.sunLight.position.set(-5.5, 1.8, 3.5);
-        this.sunLight.intensity = 3.4;
-        this.singlePlanetGroup.rotation.z = THREE.MathUtils.degToRad(23.44);
-        this.singlePlanetMesh.material = new THREE.MeshStandardMaterial({
-          map: this.textureCache.get(earthTextureUrl),
-          roughness: 0.52,
-          metalness: 0.08,
-        });
-        this.singleCloudsMesh.visible = true;
-      } else if (mode === "moon") {
-        this.sunLight.position.set(-5.5, 1.8, 3.5);
-        this.sunLight.intensity = 3.4;
-        this.singlePlanetGroup.rotation.z = THREE.MathUtils.degToRad(1.54);
-        this.singlePlanetMesh.material = new THREE.MeshStandardMaterial({
-          map: this.textureCache.get(moonTextureUrl),
-          roughness: 0.94,
-          metalness: 0.0,
-        });
-        this.singleCloudsMesh.visible = false;
-      }
-    }
   }
 
   public setRotation(rotating: boolean): void {
@@ -235,19 +184,16 @@ export class NASAThreeGlobeScene {
       const dx = clientX - this.lastPointer.x;
       const dy = clientY - this.lastPointer.y;
 
-      if (this.currentMode === "earthrise") {
-        // In Earthrise mode, drag spins the rotating Earth in the distance and gently pans the Moon horizon
-        this.distantEarthMesh.rotation.y += dx * 0.008;
-        this.distantCloudsMesh.rotation.y += dx * 0.008;
-        this.moonHorizonMesh.rotation.y += dx * 0.002;
-        this.moonHorizonMesh.rotation.x = Math.max(0.1, Math.min(0.6, this.moonHorizonMesh.rotation.x + dy * 0.002));
-      } else {
-        // Single planet drag
-        this.singlePlanetMesh.rotation.y += dx * 0.005;
-        if (this.singleCloudsMesh) {
-          this.singleCloudsMesh.rotation.y += dx * 0.005;
-        }
-      }
+      // Drag to rotate Earth and advance Moon orbit
+      this.earthMesh.rotation.y += dx * 0.006;
+      this.cloudsMesh.rotation.y += dx * 0.006;
+      this.moonOrbitAngle += dx * 0.002;
+      this.updateMoonPosition();
+
+      this.earthGroup.rotation.x = Math.max(
+        THREE.MathUtils.degToRad(8),
+        Math.min(THREE.MathUtils.degToRad(28), this.earthGroup.rotation.x + dy * 0.003)
+      );
 
       this.lastPointer = { x: clientX, y: clientY };
     };
@@ -270,24 +216,22 @@ export class NASAThreeGlobeScene {
   }
 
   private startLoop(): void {
-    const normalBaseSpeed = 0.0018;
+    const earthBaseSpeed = 0.0016;
+    const moonOrbitSpeed = 0.0006;
 
     const animate = () => {
       if (this.isRotating && !this.isDragging) {
-        if (this.currentMode === "earthrise") {
-          // Earth is continuously rotating in deep space!
-          this.distantEarthMesh.rotation.y += normalBaseSpeed * this.speedFactor;
-          // Dynamic cloud parallax drift across Earth's atmosphere
-          this.distantCloudsMesh.rotation.y += normalBaseSpeed * this.speedFactor * 1.18;
-          // Very slow subtle lunar orbit progression
-          this.moonHorizonMesh.rotation.y += normalBaseSpeed * this.speedFactor * 0.08;
-        } else {
-          this.singlePlanetMesh.rotation.y += normalBaseSpeed * this.speedFactor;
-          if (this.singleCloudsMesh.visible) {
-            this.singleCloudsMesh.rotation.y += normalBaseSpeed * this.speedFactor * 1.15;
-          }
-        }
+        // 1. Earth rotates on its own axis
+        this.earthMesh.rotation.y += earthBaseSpeed * this.speedFactor;
+
+        // 2. Clouds have dynamic atmospheric parallax drift
+        this.cloudsMesh.rotation.y += earthBaseSpeed * this.speedFactor * 1.16;
+
+        // 3. Moon orbits around Earth in the space sky
+        this.moonOrbitAngle += moonOrbitSpeed * this.speedFactor;
+        this.updateMoonPosition();
       }
+
       this.renderer.render(this.scene, this.camera);
       this.animFrameId = requestAnimationFrame(animate);
     };
@@ -299,11 +243,10 @@ export class NASAThreeGlobeScene {
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
     }
-    this.moonHorizonMesh.geometry.dispose();
-    this.distantEarthMesh.geometry.dispose();
-    this.distantCloudsMesh.geometry.dispose();
-    this.singlePlanetMesh.geometry.dispose();
-    this.singleCloudsMesh.geometry.dispose();
+    this.earthMesh.geometry.dispose();
+    this.cloudsMesh.geometry.dispose();
+    this.atmosphereLimb.geometry.dispose();
+    this.moonMesh.geometry.dispose();
     this.textureCache.forEach((tex) => tex.dispose());
     this.textureCache.clear();
     this.renderer.dispose();

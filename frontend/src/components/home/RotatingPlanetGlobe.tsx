@@ -1,28 +1,25 @@
 import React, { useRef, useEffect } from "react";
-import {
-  GlobeViewMode,
-  NASAThreeGlobeScene,
-} from "./NASAThreeGlobeRenderer";
+import { NASAThreeGlobeScene } from "./NASAThreeGlobeRenderer";
 
 export interface RotatingPlanetGlobeProps {
-  viewMode?: GlobeViewMode;
   className?: string;
 }
 
 export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
-  viewMode = "earthrise",
   className = "",
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<NASAThreeGlobeScene | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    // Cinematic widescreen Earthrise resolution
-    const width = 800;
-    const height = 620;
+    const width = container.clientWidth || window.innerWidth || 1200;
+    const height = container.clientHeight || 750;
+
     const scene = new NASAThreeGlobeScene(canvas, width, height);
     sceneRef.current = scene;
 
@@ -32,7 +29,7 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
       scene.setRotation(false);
     } else {
       scene.setRotation(true);
-      scene.setSpeed(0.8); // Smooth realistic rotation
+      scene.setSpeed(0.8);
     }
 
     const handleMotionChange = (e: MediaQueryListEvent) => {
@@ -40,29 +37,35 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
     };
     mediaQuery.addEventListener("change", handleMotionChange);
 
+    // Responsive resize observer
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: w, height: h } = entry.contentRect;
+        if (w > 0 && h > 0 && sceneRef.current) {
+          sceneRef.current.resize(w, h);
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       mediaQuery.removeEventListener("change", handleMotionChange);
       scene.dispose();
       sceneRef.current = null;
     };
   }, []);
 
-  useEffect(() => {
-    if (sceneRef.current) {
-      sceneRef.current.setMode(viewMode);
-    }
-  }, [viewMode]);
-
   return (
     <div
-      className={`relative w-full flex items-center justify-center select-none overflow-visible ${className}`}
+      ref={containerRef}
+      className={`relative w-full h-full overflow-hidden select-none ${className}`}
     >
       <canvas
         ref={canvasRef}
-        width={800}
-        height={620}
-        className="w-full max-w-[480px] sm:max-w-[620px] lg:max-w-[780px] h-auto aspect-[800/620] touch-none cursor-grab active:cursor-grabbing bg-transparent"
-        aria-label="Interactive 3D representation of Earthrise from the Moon"
+        className="w-full h-full block touch-none cursor-grab active:cursor-grabbing bg-transparent"
+        aria-label="Interactive 3D simulation of Earth rotating with Moon orbiting in space"
       />
     </div>
   );
