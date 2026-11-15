@@ -1,11 +1,33 @@
 import os
+import shutil
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./astrax.db")
+# Determine backend base directory
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DATA_DIR = os.path.join(BACKEND_DIR, "data")
+SEED_DB_PATH = os.path.join(DATA_DIR, "seed.db")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    db_file = os.path.join(BACKEND_DIR, "astrax.db")
+    if os.path.exists(SEED_DB_PATH) and (not os.path.exists(db_file) or os.path.getsize(db_file) < 1000000):
+        os.makedirs(os.path.dirname(os.path.abspath(db_file)), exist_ok=True)
+        shutil.copyfile(SEED_DB_PATH, db_file)
+    DATABASE_URL = f"sqlite:///{db_file.replace(os.sep, '/')}"
+elif DATABASE_URL.startswith("sqlite"):
+    raw_path = DATABASE_URL.replace("sqlite:///", "").replace("sqlite://", "")
+    if os.name == "nt" and len(raw_path) > 2 and raw_path[1] == ":" and raw_path[0] == "/":
+        raw_path = raw_path[1:]
+    if not os.path.isabs(raw_path):
+        raw_path = os.path.join(BACKEND_DIR, raw_path)
+    if os.path.exists(SEED_DB_PATH) and (not os.path.exists(raw_path) or os.path.getsize(raw_path) < 1000000):
+        os.makedirs(os.path.dirname(os.path.abspath(raw_path)), exist_ok=True)
+        shutil.copyfile(SEED_DB_PATH, raw_path)
+    DATABASE_URL = f"sqlite:///{os.path.abspath(raw_path).replace(os.sep, '/')}"
 
 # SQLite requires check_same_thread=False when accessed from multiple threads in FastAPI
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -28,6 +50,19 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     seed_factual_planets()
     seed_factual_benchmarks()
+    # Verify regions are seeded; if empty and seed.db is available, restore
+    db = SessionLocal()
+    try:
+        if db.query(models.Region).count() == 0 and os.path.exists(SEED_DB_PATH) and DATABASE_URL.startswith("sqlite"):
+            db.close()
+            raw_path = DATABASE_URL.replace("sqlite:///", "").replace("sqlite://", "")
+            if os.name == "nt" and len(raw_path) > 2 and raw_path[1] == ":" and raw_path[0] == "/":
+                raw_path = raw_path[1:]
+            shutil.copyfile(SEED_DB_PATH, raw_path)
+    except Exception:
+        pass
+    finally:
+        db.close()
 
 
 def seed_factual_planets():

@@ -115,8 +115,13 @@ export const Discovery: React.FC = () => {
   const handleTriggerSearch = async (overrideRegionId?: number) => {
     let targetId = overrideRegionId || selectedRegionId;
     if (!targetId) {
-      targetId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
-      setSelectedRegionId(targetId);
+      if (regions.length > 0) {
+        targetId = regions[0].id;
+        setSelectedRegionId(targetId);
+      } else {
+        setErrorMessage("Please select a target planetary region or upload an orbital observation image.");
+        return;
+      }
     }
 
     setIsSearching(true);

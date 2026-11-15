@@ -537,7 +537,14 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
           {selectedPlanetName} Landmarks:
         </span>
         {currentLandmarks.map((sug) => {
-          const isSelected = selectedRegionId === sug.id;
+          const matchedReg = regions.find(
+            (r) =>
+              r.name.toLowerCase().includes(sug.short.toLowerCase()) ||
+              r.name.toLowerCase().includes(sug.name.toLowerCase()) ||
+              r.id === sug.id
+          );
+          const activeId = matchedReg ? matchedReg.id : sug.id;
+          const isSelected = selectedRegionId === activeId;
           return (
             <button
               key={sug.name}
@@ -545,7 +552,20 @@ export const UnifiedDiscoverySearch: React.FC<UnifiedDiscoverySearchProps> = ({
               onClick={async () => {
                 setSearchTerm(sug.name);
                 setIsDropdownOpen(false);
-                onSelectRegion(sug.id);
+                if (matchedReg) {
+                  onSelectRegion(matchedReg.id);
+                } else {
+                  try {
+                    const gazItems = await api.searchGazetteer(sug.short, selectedPlanetName);
+                    if (gazItems.length > 0) {
+                      onSelectGazetteerItem(gazItems[0]);
+                      return;
+                    }
+                  } catch {
+                    // ignore
+                  }
+                  onSelectRegion(sug.id);
+                }
               }}
               className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all border ${
                 isSelected
