@@ -15,6 +15,9 @@ export class NASAThreeGlobeScene {
   private moonMesh: THREE.Mesh;
   private moonOrbitAngle: number = 0.45;
 
+  // Background deep space starfield
+  private starPoints: THREE.Points;
+
   private textureCache: Map<string, THREE.Texture> = new Map();
   private textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
 
@@ -46,7 +49,7 @@ export class NASAThreeGlobeScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
 
-    // 1. High-contrast space lighting: deep dark navy oceans and rich, vivid land
+    // 1. High-contrast space lighting: deep natural navy oceans and rich, vivid land
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.16);
     this.scene.add(ambientLight);
 
@@ -60,12 +63,59 @@ export class NASAThreeGlobeScene {
     rimBackLight.position.set(-5.5, 3.5, -2.5);
     this.scene.add(rimBackLight);
 
+    // ==========================================
+    // 2. BACKGROUND STARFIELD IN DEEP SPACE
+    // ==========================================
+    const starCount = 240;
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(starCount * 3);
+    const starColors = new Float32Array(starCount * 3);
+
+    for (let i = 0; i < starCount; i++) {
+      const i3 = i * 3;
+      // Scatter across upper sky and deep background
+      starPositions[i3] = (Math.random() - 0.5) * 16.0;
+      starPositions[i3 + 1] = Math.random() * 4.2 - 0.2; // in the space sky above Earth
+      starPositions[i3 + 2] = -2.0 - Math.random() * 8.0;
+
+      // Realistic stellar colors: white, cyan-white, and warm gold
+      const rand = Math.random();
+      if (rand < 0.18) {
+        // Warm golden star
+        starColors[i3] = 1.0;
+        starColors[i3 + 1] = 0.90;
+        starColors[i3 + 2] = 0.75;
+      } else if (rand < 0.40) {
+        // Bright blue-white star
+        starColors[i3] = 0.82;
+        starColors[i3 + 1] = 0.92;
+        starColors[i3 + 2] = 1.0;
+      } else {
+        // Pure diamond white star
+        starColors[i3] = 0.95;
+        starColors[i3 + 1] = 0.97;
+        starColors[i3 + 2] = 1.0;
+      }
+    }
+
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    starGeo.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
+
+    const starMat = new THREE.PointsMaterial({
+      size: 0.045,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+    });
+    this.starPoints = new THREE.Points(starGeo, starMat);
+    this.scene.add(this.starPoints);
+
     // Preload textures: Google Earth satellite map (cloud-free, high contrast) and Moon
     const earthTex = this.loadTexture(earthTextureUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
 
     // ==========================================
-    // 2. WIDE GOOGLE EARTH SATELLITE HORIZON (HIGH CONTRAST, DEEP OCEANS)
+    // 3. WIDE GOOGLE EARTH SATELLITE HORIZON (HIGH CONTRAST, DEEP OCEANS)
     // ==========================================
     this.earthGroup = new THREE.Group();
     // Positioned so the curved horizon spans wide across the webpage
@@ -80,8 +130,8 @@ export class NASAThreeGlobeScene {
     const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      roughness: 0.65,
-      metalness: 0.02,
+      roughness: 0.72,
+      metalness: 0.0,
     });
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
     // Initial rotation to showcase the vibrant Atlantic Ocean, Europe, Africa & Americas
@@ -89,7 +139,7 @@ export class NASAThreeGlobeScene {
     this.earthGroup.add(this.earthMesh);
 
     // ==========================================
-    // 3. SPHERICAL MOON IN THE SKY (orbiting around Earth)
+    // 4. SPHERICAL MOON IN THE SKY (orbiting around Earth)
     // ==========================================
     const moonRadius = 0.52;
     const moonGeo = new THREE.SphereGeometry(moonRadius, 96, 96);
@@ -126,7 +176,6 @@ export class NASAThreeGlobeScene {
       return this.textureCache.get(url)!;
     }
     const tex = this.textureLoader.load(url);
-    // CRITICAL: Set sRGB color space so Three.js renders textures with correct gamma and rich contrast
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
@@ -205,6 +254,9 @@ export class NASAThreeGlobeScene {
         // 2. Moon orbits around Earth in the space sky
         this.moonOrbitAngle += moonOrbitSpeed * this.speedFactor;
         this.updateMoonPosition();
+
+        // 3. Subtle celestial starfield drift
+        this.starPoints.rotation.y += 0.00008 * this.speedFactor;
       }
 
       this.renderer.render(this.scene, this.camera);
@@ -220,6 +272,8 @@ export class NASAThreeGlobeScene {
     }
     this.earthMesh.geometry.dispose();
     this.moonMesh.geometry.dispose();
+    this.starPoints.geometry.dispose();
+    (this.starPoints.material as THREE.Material).dispose();
     this.textureCache.forEach((tex) => tex.dispose());
     this.textureCache.clear();
     this.renderer.dispose();
