@@ -29,18 +29,21 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="space-y-16 py-2">
-      {/* 1. HERO SECTION */}
+    <div className="w-full space-y-16">
+      {/* 1. HERO SECTION (SpaceX-style full-bleed cinematic hero) */}
       <HeroSection onScrollToHowItWorks={scrollToHowItWorks} />
 
-      {/* 2. HOW IT WORKS (3 steps, plain cards) */}
-      <HowItWorksSection />
+      {/* 2-4. Containerized Discovery Guidelines & Data Sections */}
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6 space-y-16 pb-12">
+        {/* 2. HOW IT WORKS (3 steps, plain cards) */}
+        <HowItWorksSection />
 
-      {/* 3. WHAT YOU GET (4 short items) */}
-      <CapabilitiesSection />
+        {/* 3. WHAT YOU GET (4 short items) */}
+        <CapabilitiesSection />
 
-      {/* 4. DATA SOURCES (Compact factual list) */}
-      <DatasetCatalogSection datasets={datasets} />
+        {/* 4. DATA SOURCES (Compact factual list) */}
+        <DatasetCatalogSection datasets={datasets} />
+      </div>
     </div>
   );
 };

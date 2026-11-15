@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { AstraXLogo, CassinXLogo } from "./ui";
 
 const navLinks = [
@@ -11,12 +11,24 @@ const navLinks = [
 
 export const Layout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F17] text-[#F8FAFC] selection:bg-accent/20 selection:text-accent">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-[#0B0F17]/95 backdrop-blur border-b border-[#243044]">
-        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
+      <header
+        className={`sticky top-0 z-50 backdrop-blur transition-colors ${
+          isHome
+            ? "bg-black/90 border-b border-white/10"
+            : "bg-[#0B0F17]/95 border-b border-[#243044]"
+        }`}
+      >
+        <div
+          className={`mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6 ${
+            isHome ? "max-w-[1400px]" : "max-w-[1120px]"
+          }`}
+        >
           {/* Logo */}
           <Link to="/" className="shrink-0">
             <AstraXLogo size="md" />
@@ -86,7 +98,13 @@ export const Layout: React.FC = () => {
       </header>
 
       {/* Main Viewport Content */}
-      <main className="flex-1 w-full max-w-[1120px] mx-auto px-4 sm:px-6 py-6">
+      <main
+        className={
+          isHome
+            ? "flex-1 w-full"
+            : "flex-1 w-full max-w-[1120px] mx-auto px-4 sm:px-6 py-6"
+        }
+      >
         <Outlet />
       </main>
 

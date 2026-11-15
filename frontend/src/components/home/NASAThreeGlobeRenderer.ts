@@ -4,7 +4,7 @@ import marsTextureUrl from "/textures/mars.jpg?url";
 import moonTextureUrl from "/textures/moon.jpg?url";
 import cloudsTextureUrl from "/textures/earth_clouds.png?url";
 
-export type GlobePlanet = "earth" | "moon" | "mars";
+export type GlobePlanet = "mars" | "earth" | "moon";
 
 export interface PlanetConfig {
   name: string;
@@ -17,6 +17,15 @@ export interface PlanetConfig {
 }
 
 export const PLANET_CONFIGS: Record<GlobePlanet, PlanetConfig> = {
+  mars: {
+    name: "Mars",
+    textureUrl: marsTextureUrl,
+    axialTiltDeg: 25.19,
+    rotationPeriod: "24.62 hours",
+    glowColor: 0xf97316,
+    oceanSpecular: false,
+    provenance: "NASA Viking & MOLA Global Map",
+  },
   earth: {
     name: "Earth (Terra)",
     textureUrl: earthTextureUrl,
@@ -35,15 +44,6 @@ export const PLANET_CONFIGS: Record<GlobePlanet, PlanetConfig> = {
     oceanSpecular: false,
     provenance: "NASA LRO / Clementine Mosaic",
   },
-  mars: {
-    name: "Mars",
-    textureUrl: marsTextureUrl,
-    axialTiltDeg: 25.19,
-    rotationPeriod: "24.62 hours",
-    glowColor: 0xf97316,
-    oceanSpecular: false,
-    provenance: "NASA Viking & MOLA Global Map",
-  },
 };
 
 export class NASAThreeGlobeScene {
@@ -59,7 +59,7 @@ export class NASAThreeGlobeScene {
   private textureCache: Map<string, THREE.Texture> = new Map();
   private textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
   private animFrameId: number | null = null;
-  private currentPlanet: GlobePlanet = "earth";
+  private currentPlanet: GlobePlanet = "mars";
   private isRotating: boolean = true;
   private speedFactor: number = 1.0;
   private isDragging: boolean = false;
@@ -69,8 +69,9 @@ export class NASAThreeGlobeScene {
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    this.camera.position.z = 4.2;
+    // Cinematic perspective camera (SpaceX scale)
+    this.camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
+    this.camera.position.z = 3.65;
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -84,48 +85,33 @@ export class NASAThreeGlobeScene {
     this.planetGroup = new THREE.Group();
     this.scene.add(this.planetGroup);
 
-    // Natural solar lighting for NASA-style illuminated planet and shadow terminator
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
+    // Deep space realistic solar lighting (SpaceX aesthetic)
+    // 1. Very faint ambient light so the shadow side fades seamlessly into deep space black #000000
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.035);
     this.scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff8ee, 2.4);
-    sunLight.position.set(-6.0, 2.2, 4.0);
+    // 2. Powerful directional sunlight coming from the left / front-left
+    // Creates the high-contrast day/night terminator line matching SpaceX imagery
+    const sunLight = new THREE.DirectionalLight(0xfff6ec, 3.8);
+    sunLight.position.set(-7.5, 0.4, 2.0);
     this.scene.add(sunLight);
 
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
-    rimLight.position.set(5.5, -2.0, -2.5);
+    // 3. Faint warm rim light on the dark silhouette
+    const rimLight = new THREE.DirectionalLight(0x7c2d12, 0.16);
+    rimLight.position.set(5.5, 0.0, -3.0);
     this.scene.add(rimLight);
 
-    // Subtle 3D background starfield particles
-    const starCount = 500;
-    const starGeo = new THREE.BufferGeometry();
-    const starCoords = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount * 3; i += 3) {
-      starCoords[i] = (Math.random() - 0.5) * 60;
-      starCoords[i + 1] = (Math.random() - 0.5) * 60;
-      starCoords[i + 2] = -10 - Math.random() * 25;
-    }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starCoords, 3));
-    const starMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.16,
-      transparent: true,
-      opacity: 0.7,
-    });
-    const starField = new THREE.Points(starGeo, starMat);
-    this.scene.add(starField);
-
-    // High tessellation sphere for surface
-    const sphereGeo = new THREE.SphereGeometry(1.5, 64, 64);
+    // High tessellation sphere for crisp spherical surface
+    const sphereGeo = new THREE.SphereGeometry(1.55, 96, 96);
     this.material = new THREE.MeshStandardMaterial({
-      roughness: 0.55,
-      metalness: 0.05,
+      roughness: 0.85,
+      metalness: 0.0,
     });
     this.sphereMesh = new THREE.Mesh(sphereGeo, this.material);
     this.planetGroup.add(this.sphereMesh);
 
-    // Real atmospheric cloud layer for Earth
-    const cloudsGeo = new THREE.SphereGeometry(1.514, 64, 64);
+    // Cloud layer for Earth
+    const cloudsGeo = new THREE.SphereGeometry(1.565, 80, 80);
     const cloudsTex = this.textureLoader.load(cloudsTextureUrl);
     cloudsTex.wrapS = THREE.RepeatWrapping;
     this.cloudsMaterial = new THREE.MeshStandardMaterial({
@@ -136,21 +122,22 @@ export class NASAThreeGlobeScene {
       roughness: 0.9,
     });
     this.cloudsMesh = new THREE.Mesh(cloudsGeo, this.cloudsMaterial);
+    this.cloudsMesh.visible = false;
     this.planetGroup.add(this.cloudsMesh);
 
-    // Atmospheric Glow Halo Shell
-    const atmosGeo = new THREE.SphereGeometry(1.528, 48, 48);
+    // Subtle Atmospheric Glow Shell
+    const atmosGeo = new THREE.SphereGeometry(1.58, 64, 64);
     const atmosMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+      color: 0xf97316,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.08,
       side: THREE.BackSide,
     });
     this.atmosphereMesh = new THREE.Mesh(atmosGeo, atmosMat);
     this.planetGroup.add(this.atmosphereMesh);
 
     this.setupInteractivity(canvas);
-    this.setPlanet("earth");
+    this.setPlanet("mars");
     this.startLoop();
   }
 
@@ -161,26 +148,26 @@ export class NASAThreeGlobeScene {
     // Apply accurate physical axial tilt
     this.planetGroup.rotation.z = THREE.MathUtils.degToRad(cfg.axialTiltDeg);
 
-    // Cloud layer visibility & planetary material tuning
-    if (planet === "earth") {
+    // Planet-specific surface materials
+    if (planet === "mars") {
+      this.cloudsMesh.visible = false;
+      this.material.roughness = 0.82;
+      this.material.metalness = 0.0;
+    } else if (planet === "earth") {
       this.cloudsMesh.visible = true;
       this.material.roughness = 0.55;
       this.material.metalness = 0.06;
-    } else if (planet === "moon") {
-      this.cloudsMesh.visible = false;
-      this.material.roughness = 0.92;
-      this.material.metalness = 0.0;
     } else {
       this.cloudsMesh.visible = false;
-      this.material.roughness = 0.72;
-      this.material.metalness = 0.03;
+      this.material.roughness = 0.95;
+      this.material.metalness = 0.0;
     }
 
     const atmosMat = this.atmosphereMesh.material as THREE.MeshBasicMaterial;
     atmosMat.color.setHex(cfg.glowColor);
-    atmosMat.opacity = planet === "earth" ? 0.25 : 0.12;
+    atmosMat.opacity = planet === "earth" ? 0.22 : planet === "mars" ? 0.08 : 0.0;
 
-    // Load or reuse cached texture
+    // Load texture with anisotropic filtering for maximum crispness
     if (this.textureCache.has(cfg.textureUrl)) {
       this.material.map = this.textureCache.get(cfg.textureUrl)!;
       this.material.needsUpdate = true;
@@ -189,6 +176,9 @@ export class NASAThreeGlobeScene {
         tex.wrapS = THREE.RepeatWrapping;
         tex.wrapT = THREE.ClampToEdgeWrapping;
         tex.generateMipmaps = true;
+        if (this.renderer.capabilities.getMaxAnisotropy) {
+          tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+        }
         this.textureCache.set(cfg.textureUrl, tex);
         if (this.currentPlanet === planet) {
           this.material.map = tex;
@@ -223,11 +213,11 @@ export class NASAThreeGlobeScene {
       const dx = clientX - this.lastPointer.x;
       const dy = clientY - this.lastPointer.y;
 
-      this.sphereMesh.rotation.y += dx * 0.006;
+      this.sphereMesh.rotation.y += dx * 0.005;
       if (this.cloudsMesh) {
-        this.cloudsMesh.rotation.y += dx * 0.006;
+        this.cloudsMesh.rotation.y += dx * 0.005;
       }
-      this.pitch = Math.max(-0.6, Math.min(0.6, this.pitch + dy * 0.006));
+      this.pitch = Math.max(-0.5, Math.min(0.5, this.pitch + dy * 0.005));
       this.planetGroup.rotation.x = this.pitch;
 
       this.lastPointer = { x: clientX, y: clientY };
@@ -251,14 +241,14 @@ export class NASAThreeGlobeScene {
   }
 
   private startLoop(): void {
-    const normalBaseSpeed = 0.0022; // ~1 rotation every 47 seconds at 1x speed
+    // Majestic, calm axial rotation (~1 rotation every 65 seconds)
+    const normalBaseSpeed = 0.0014;
 
     const animate = () => {
       if (this.isRotating && !this.isDragging) {
         this.sphereMesh.rotation.y += normalBaseSpeed * this.speedFactor;
         if (this.currentPlanet === "earth" && this.cloudsMesh) {
-          // Dynamic cloud parallax drift across continents
-          this.cloudsMesh.rotation.y += normalBaseSpeed * this.speedFactor * 1.16;
+          this.cloudsMesh.rotation.y += normalBaseSpeed * this.speedFactor * 1.14;
         }
       }
       this.renderer.render(this.scene, this.camera);

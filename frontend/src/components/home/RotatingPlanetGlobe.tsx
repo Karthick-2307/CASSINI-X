@@ -1,13 +1,19 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import {
   GlobePlanet,
   NASAThreeGlobeScene,
 } from "./NASAThreeGlobeRenderer";
 
-const PLANET_LIST: GlobePlanet[] = ["earth", "moon", "mars"];
+export interface RotatingPlanetGlobeProps {
+  activePlanet?: GlobePlanet;
+  className?: string;
+}
 
-export const RotatingPlanetGlobe: React.FC = () => {
-  const [activePlanet, setActivePlanet] = useState<GlobePlanet>("earth");
+export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
+  activePlanet = "mars",
+  className = "",
+}) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<NASAThreeGlobeScene | null>(null);
 
@@ -15,7 +21,8 @@ export const RotatingPlanetGlobe: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const size = 380;
+    // High-resolution canvas size (SpaceX cinematic scale)
+    const size = 720;
     const scene = new NASAThreeGlobeScene(canvas, size, size);
     sceneRef.current = scene;
 
@@ -25,7 +32,7 @@ export const RotatingPlanetGlobe: React.FC = () => {
       scene.setRotation(false);
     } else {
       scene.setRotation(true);
-      scene.setSpeed(0.5); // Calm, slow auto-rotation
+      scene.setSpeed(0.65); // Majestic cinematic slow rotation
     }
 
     const handleMotionChange = (e: MediaQueryListEvent) => {
@@ -47,43 +54,17 @@ export const RotatingPlanetGlobe: React.FC = () => {
   }, [activePlanet]);
 
   return (
-    <div className="w-full flex flex-col items-center justify-center select-none">
-      {/* Body Selector (Earth / Moon / Mars) */}
-      <div className="flex items-center space-x-1 p-1 rounded-btn bg-surface border border-border mb-3 z-10">
-        {PLANET_LIST.map((p) => {
-          const isSelected = activePlanet === p;
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setActivePlanet(p)}
-              className={`px-3 py-1 rounded text-xs font-sans font-medium capitalize transition-colors ${
-                isSelected
-                  ? "bg-raised text-accent font-semibold border border-border"
-                  : "text-text-muted hover:text-text-primary"
-              }`}
-            >
-              {p}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 3D Celestial Body Canvas */}
-      <div className="relative flex items-center justify-center">
-        <canvas
-          ref={canvasRef}
-          width={380}
-          height={380}
-          className="rounded-full touch-none cursor-grab active:cursor-grabbing"
-          aria-label={`Interactive 3D representation of ${activePlanet}`}
-        />
-      </div>
-
-      {/* Single Caption */}
-      <p className="text-xs text-text-muted font-sans mt-3 text-center">
-        Drag to rotate
-      </p>
+    <div
+      ref={containerRef}
+      className={`relative w-full flex items-center justify-center select-none ${className}`}
+    >
+      <canvas
+        ref={canvasRef}
+        width={720}
+        height={720}
+        className="w-[360px] h-[360px] sm:w-[500px] sm:h-[500px] md:w-[600px] md:h-[600px] lg:w-[720px] lg:h-[720px] max-w-none touch-none cursor-grab active:cursor-grabbing drop-shadow-[0_0_50px_rgba(249,115,22,0.12)]"
+        aria-label={`Interactive 3D representation of ${activePlanet}`}
+      />
     </div>
   );
 };
