@@ -26,7 +26,7 @@ export const Discovery: React.FC = () => {
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [selectedPlanetName, setSelectedPlanetName] = useState<string>(queryPlanet || "Mars");
   const [regions, setRegions] = useState<Region[]>([]);
-  const [selectedRegionId, setSelectedRegionId] = useState<number | null>(queryRegionId || 2);
+  const [selectedRegionId, setSelectedRegionId] = useState<number | null>(queryRegionId || null);
 
   // Local Image Upload State
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -38,7 +38,7 @@ export const Discovery: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisDetailResponse | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateMatch | null>(null);
 
-  // Switch planet with immediate region reload and search execution
+  // Switch planet tab without forcing unwanted immediate search
   const handleSelectPlanet = async (planetName: string) => {
     setSelectedPlanetName(planetName);
     setErrorMessage(null);
@@ -49,16 +49,9 @@ export const Discovery: React.FC = () => {
       setRegions(regData);
       if (regData.length > 0) {
         setSelectedRegionId(regData[0].id);
-        handleTriggerSearch(regData[0].id);
-      } else {
-        const fallbackId = planetName.toLowerCase() === "moon" ? 3 : 2;
-        setSelectedRegionId(fallbackId);
-        handleTriggerSearch(fallbackId);
       }
     } catch {
-      const fallbackId = planetName.toLowerCase() === "moon" ? 3 : 2;
-      setSelectedRegionId(fallbackId);
-      handleTriggerSearch(fallbackId);
+      // fallback
     }
   };
 
@@ -71,7 +64,7 @@ export const Discovery: React.FC = () => {
       .catch((err) => console.warn("Planets fetch:", err));
   }, []);
 
-  // 2. Load Regions and trigger initial search
+  // 2. Load Regions (only execute search if queryRegionId is explicitly provided in URL)
   useEffect(() => {
     const targetPlanet = planets.find((p) => p.name.toLowerCase() === selectedPlanetName.toLowerCase());
     const planetId = targetPlanet ? targetPlanet.id : (selectedPlanetName.toLowerCase() === "moon" ? 2 : 3);
@@ -81,19 +74,15 @@ export const Discovery: React.FC = () => {
         setRegions(data);
         if (data.length > 0) {
           const matchingRegion = queryRegionId && data.find((r) => r.id === queryRegionId);
-          const nextRegionId = matchingRegion ? matchingRegion.id : (selectedRegionId || data[0].id);
+          const nextRegionId = matchingRegion ? matchingRegion.id : data[0].id;
           setSelectedRegionId(nextRegionId);
-          handleTriggerSearch(nextRegionId);
-        } else {
-          const fallbackId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
-          setSelectedRegionId(fallbackId);
-          handleTriggerSearch(fallbackId);
+          if (queryRegionId) {
+            handleTriggerSearch(nextRegionId);
+          }
         }
       })
       .catch(() => {
-        const fallbackId = selectedPlanetName.toLowerCase() === "moon" ? 3 : 2;
-        setSelectedRegionId(fallbackId);
-        handleTriggerSearch(fallbackId);
+        // silent fallback
       });
   }, [selectedPlanetName, planets, queryRegionId]);
 

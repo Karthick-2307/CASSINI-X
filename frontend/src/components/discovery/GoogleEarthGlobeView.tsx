@@ -24,10 +24,10 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
-  const isSpinningRef = useRef<boolean>(false);
+  const isSpinningRef = useRef<boolean>(true);
   const animFrameIdRef = useRef<number | null>(null);
 
-  const [isSpinning, setIsSpinning] = useState<boolean>(false);
+  const [isSpinning, setIsSpinning] = useState<boolean>(true);
   const [currentBasemap, setCurrentBasemap] = useState<string>("google-satellite");
   const [showPopupCard, setShowPopupCard] = useState<boolean>(true);
 
@@ -35,17 +35,18 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
+    // Neutral global Earth overview coordinates (zoom 1.6), NOT locked to Atacama
     const initialCenter: [number, number] = selectedCandidate
       ? [selectedCandidate.lon, selectedCandidate.lat]
-      : [-69.5, -24.0];
-    const initialZoom = selectedCandidate ? 6.5 : 2.5;
+      : [15.0, 20.0];
+    const initialZoom = selectedCandidate ? 6.5 : 1.6;
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: getBasemapStyle("earth", currentBasemap),
       center: initialCenter,
       zoom: initialZoom,
-      pitch: 30,
+      pitch: 20,
       bearing: 0,
     });
 
@@ -337,26 +338,28 @@ export const GoogleEarthGlobeView: React.FC<GoogleEarthGlobeViewProps> = ({
         );
       })()}
 
-      {/* Similarity Legend (Bottom Left) */}
-      <div className="absolute bottom-4 left-3 z-10 hidden sm:block pointer-events-none">
-        <div className="bg-[#111826]/90 border border-[#243044] rounded p-2.5 text-[10px] font-mono backdrop-blur-sm space-y-1 text-[#94A3B8] shadow-md">
-          <div className="text-[#F8FAFC] font-semibold text-[11px] pb-1 border-b border-[#243044]">
-            Similarity Scale
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#34D399] bg-[#34D399]/30" />
-            <span className="text-[#E5E7EB]">&ge; 85% High Match</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#38BDF8] bg-[#38BDF8]/30" />
-            <span className="text-[#E5E7EB]">70% – 85% Strong Match</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#FBBF24] bg-[#FBBF24]/30" />
-            <span className="text-[#E5E7EB]">50% – 70% Moderate</span>
+      {/* Similarity Legend (Bottom Left, only when candidates exist) */}
+      {candidates.length > 0 && (
+        <div className="absolute bottom-4 left-3 z-10 hidden sm:block pointer-events-none">
+          <div className="bg-[#111826]/90 border border-[#243044] rounded p-2.5 text-[10px] font-mono backdrop-blur-sm space-y-1 text-[#94A3B8] shadow-md">
+            <div className="text-[#F8FAFC] font-semibold text-[11px] pb-1 border-b border-[#243044]">
+              Similarity Scale
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#34D399] bg-[#34D399]/30" />
+              <span className="text-[#E5E7EB]">&ge; 85% High Match</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#38BDF8] bg-[#38BDF8]/30" />
+              <span className="text-[#E5E7EB]">70% – 85% Strong Match</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-sm rotate-45 border border-[#FBBF24] bg-[#FBBF24]/30" />
+              <span className="text-[#E5E7EB]">50% – 70% Moderate</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
