@@ -55,26 +55,27 @@ def run_kmeans_clustering(
     max_k = min(max_k, n_samples - 1)
     min_k = min(min_k, max_k)
 
+    sample_sz = min(500, n_samples)
     if min_k >= max_k:
         best_k = min_k
-        km = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+        km = KMeans(n_clusters=best_k, random_state=42, n_init="auto")
         labels = km.fit_predict(candidate_matrix_norm)
-        sil_score = float(silhouette_score(candidate_matrix_norm, labels)) if best_k > 1 else 0.0
+        sil_score = float(silhouette_score(candidate_matrix_norm, labels, sample_size=sample_sz, random_state=42)) if best_k > 1 else 0.0
     else:
         best_k = min_k
         best_sil = -1.0
         best_km = None
 
         for k in range(min_k, max_k + 1):
-            km = KMeans(n_clusters=k, random_state=42, n_init=10)
+            km = KMeans(n_clusters=k, random_state=42, n_init="auto")
             candidate_labels = km.fit_predict(candidate_matrix_norm)
-            sil = float(silhouette_score(candidate_matrix_norm, candidate_labels))
+            sil = float(silhouette_score(candidate_matrix_norm, candidate_labels, sample_size=sample_sz, random_state=42))
             if sil > best_sil:
                 best_sil = sil
                 best_k = k
                 best_km = km
 
-        km = best_km if best_km is not None else KMeans(n_clusters=best_k, random_state=42, n_init=10).fit(candidate_matrix_norm)
+        km = best_km if best_km is not None else KMeans(n_clusters=best_k, random_state=42, n_init="auto").fit(candidate_matrix_norm)
         labels = km.labels_
         sil_score = best_sil
 

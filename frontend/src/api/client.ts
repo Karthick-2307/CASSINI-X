@@ -34,37 +34,56 @@ export * from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-export async function apiClient<T>(endpoint: string, options?: RequestInit): Promise<T> {
+export async function apiClient<T>(endpoint: string, options?: RequestInit, retries = 2): Promise<T> {
   const url = `${BASE_URL}${endpoint}`;
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-      ...options,
-    });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      let errorMsg = `Server responded with HTTP ${response.status}`;
-      try {
-        const errorJson = (await response.json()) as ApiResponseError;
-        if (errorJson.error && errorJson.error.message) {
-          errorMsg = errorJson.error.message;
+      if (!response.ok) {
+        let errorMsg = `Server responded with HTTP ${response.status}`;
+        try {
+          const errorJson = (await response.json()) as ApiResponseError;
+          if (errorJson.error && errorJson.error.message) {
+            errorMsg = errorJson.error.message;
+          }
+        } catch {
+          // Response wasn't JSON
         }
-      } catch {
-        // Response wasn't JSON
+        throw new Error(errorMsg);
       }
-      throw new Error(errorMsg);
-    }
 
-    return (await response.json()) as T;
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      throw err;
+      return (await response.json()) as T;
+    } catch (err: unknown) {
+      const isLastAttempt = attempt === retries;
+      const isFetchError =
+        err instanceof Error &&
+        (err.message.includes("Failed to fetch") ||
+          err.message.includes("NetworkError") ||
+          err.message.includes("HTTP 502"));
+
+      if (!isLastAttempt && isFetchError) {
+        // Wait 2.5s before retrying to give backend time to warm up
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        continue;
+      }
+
+      if (err instanceof Error) {
+        if (err.message.includes("Failed to fetch")) {
+          throw new Error("Server is waking up. Please wait a moment and click Retry.");
+        }
+        throw err;
+      }
+      throw new Error("Network connection error. Ensure the ASTRA-X backend server is running.");
     }
-    throw new Error("Network connection error. Ensure the ASTRA-X backend server is running.");
   }
+  throw new Error("Request failed after retries.");
 }
 
 export const api = {
