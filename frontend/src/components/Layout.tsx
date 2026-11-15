@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { AstraXLogo, CassinXLogo } from "./ui";
+import { AstraXLogo, CassinXLogo, StarfieldBackground } from "./ui";
 
 const navLinks = [
   { path: "/", label: "Home" },
@@ -15,7 +15,10 @@ export const Layout: React.FC = () => {
   const isHome = location.pathname === "/";
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0F17] text-[#F8FAFC] selection:bg-accent/20 selection:text-accent">
+    <div className="min-h-screen flex flex-col bg-[#0B0F17] text-[#F8FAFC] selection:bg-accent/20 selection:text-accent relative overflow-x-hidden">
+      {/* Global Random Twinkling Starfield across entire website */}
+      <StarfieldBackground />
+
       {/* Top Navigation */}
       <header
         className={`sticky top-0 z-50 backdrop-blur transition-colors ${

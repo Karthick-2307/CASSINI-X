@@ -14,19 +14,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHowItWorks }
         <RotatingPlanetGlobe className="w-full h-full" />
       </div>
 
-      {/* 2. Subtle ambient twinkling stars across deep space background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
-        <div className="absolute top-[10%] left-[22%] w-1 h-1 bg-white/70 rounded-full animate-pulse shadow-[0_0_3px_#ffffff]" />
-        <div className="absolute top-[18%] left-[42%] w-1.5 h-1.5 bg-blue-100/60 rounded-full animate-pulse shadow-[0_0_4px_#bfdbfe]" />
-        <div className="absolute top-[6%] left-[65%] w-1 h-1 bg-white/80 rounded-full shadow-[0_0_2px_#ffffff]" />
-        <div className="absolute top-[24%] left-[12%] w-1 h-1 bg-amber-100/70 rounded-full animate-pulse shadow-[0_0_3px_#fde68a]" />
-        <div className="absolute top-[14%] right-[32%] w-1.5 h-1.5 bg-white/75 rounded-full animate-pulse shadow-[0_0_4px_#ffffff]" />
-        <div className="absolute top-[28%] right-[16%] w-1 h-1 bg-cyan-100/70 rounded-full shadow-[0_0_3px_#38bdf8]" />
-        <div className="absolute top-[8%] right-[48%] w-0.5 h-0.5 bg-white/90 rounded-full" />
-        <div className="absolute top-[32%] left-[30%] w-1 h-1 bg-white/60 rounded-full animate-pulse" />
-      </div>
-
-      {/* 3. Content Overlay (SpaceX-style Typography & Discovery CTAs) */}
+      {/* 2. Content Overlay (SpaceX-style Typography & Discovery CTAs) */}
       <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-14 py-12 lg:py-20 flex flex-col justify-between min-h-[86vh] lg:min-h-[92vh] pointer-events-none">
         {/* Top/Left Section: Headline & Mission Statement */}
         <div className="max-w-2xl space-y-6 pt-4 lg:pt-8 text-left pointer-events-auto">
