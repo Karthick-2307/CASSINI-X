@@ -48,17 +48,20 @@ export const LocationImagePopout: React.FC<LocationImagePopoutProps> = ({
         attributionControl: false,
       });
 
-      // Center crosshair marker
+      // Standard map location pin icon pointing to candidate coordinates
       const el = document.createElement("div");
-      el.className = "analog-target-reticle";
+      el.className = "analog-map-pin";
       el.innerHTML = `
-        <div style="position: relative; display: flex; items: center; justify-content: center; pointer-events: none;">
-          <div style="width: 32px; height: 32px; border: 2px solid #38BDF8; border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; opacity: 0.6; position: absolute;"></div>
-          <div style="width: 14px; height: 14px; background-color: #38BDF8; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 0 10px #38BDF8; position: relative;"></div>
+        <div style="cursor: pointer; pointer-events: auto; transform: translateY(0); transition: transform 0.2s ease;">
+          <svg width="30" height="40" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7)); display: block;">
+            <path d="M12 0C5.372 0 0 5.372 0 12C0 21 12 32 12 32C12 32 24 21 24 12C24 5.372 18.628 0 12 0Z" fill="#EF4444"/>
+            <circle cx="12" cy="11.5" r="4.5" fill="#FFFFFF"/>
+            <circle cx="12" cy="11.5" r="2.2" fill="#EF4444"/>
+          </svg>
         </div>
       `;
 
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([candidate.lon, candidate.lat])
         .addTo(map);
 
@@ -242,7 +245,7 @@ export const LocationImagePopout: React.FC<LocationImagePopoutProps> = ({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-3 pointer-events-none flex flex-col justify-end">
               <div className="flex items-center justify-between text-xs font-mono text-[#F8FAFC]">
                 <span className="font-semibold flex items-center space-x-1.5">
-                  <span className="text-[#34D399]">●</span>
+                  <span className="text-[#EF4444]">📍</span>
                   <span>{candidate.location_name}</span>
                 </span>
                 <span className="text-[#38BDF8] font-bold">{analogImg.resolution}</span>
