@@ -10,11 +10,10 @@ export class NASAThreeGlobeScene {
   // Earth horizon objects (wide Google Earth / NASA high-contrast satellite Earth)
   private earthGroup: THREE.Group;
   private earthMesh: THREE.Mesh;
-  private atmosphereLimb: THREE.Mesh;
 
   // Moon orbiting Earth in the space sky
   private moonMesh: THREE.Mesh;
-  private moonOrbitAngle: number = 0.35;
+  private moonOrbitAngle: number = 0.45;
 
   private textureCache: Map<string, THREE.Texture> = new Map();
   private textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
@@ -42,22 +41,26 @@ export class NASAThreeGlobeScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(0x000000, 0); // 100% transparent deep space
 
-    // 1. High-contrast space lighting: deep dark navy oceans and rich, vibrant land
-    // Low ambient light so oceans stay dark and deep instead of washed out
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
+    // Enable ACES Filmic Tone Mapping and sRGB color space for rich contrast and deep blacks
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+
+    // 1. High-contrast space lighting: deep dark navy oceans and rich, vivid land
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.16);
     this.scene.add(ambientLight);
 
     // Warm directional sunlight from upper-right
-    const sunLight = new THREE.DirectionalLight(0xfff8ee, 2.8);
-    sunLight.position.set(6.5, 3.5, 3.2);
+    const sunLight = new THREE.DirectionalLight(0xfff6ea, 2.6);
+    sunLight.position.set(6.0, 3.5, 3.5);
     this.scene.add(sunLight);
 
     // Subtle edge rim light placed behind the limb to highlight atmospheric curvature
-    const rimBackLight = new THREE.DirectionalLight(0x38bdf8, 0.22);
-    rimBackLight.position.set(-6.0, 3.0, -2.5);
+    const rimBackLight = new THREE.DirectionalLight(0x38bdf8, 0.25);
+    rimBackLight.position.set(-5.5, 3.5, -2.5);
     this.scene.add(rimBackLight);
 
-    // Preload textures: Google Earth / NASA satellite map (cloud-free, high contrast) and Moon
+    // Preload textures: Google Earth satellite map (cloud-free, high contrast) and Moon
     const earthTex = this.loadTexture(earthTextureUrl);
     const moonTex = this.loadTexture(moonTextureUrl);
 
@@ -65,39 +68,30 @@ export class NASAThreeGlobeScene {
     // 2. WIDE GOOGLE EARTH SATELLITE HORIZON (HIGH CONTRAST, DEEP OCEANS)
     // ==========================================
     this.earthGroup = new THREE.Group();
-    // Positioned low so its curved upper surface spans wide across the webpage
-    this.earthGroup.position.set(0.1, -3.95, 0.2);
-    // Real axial tilt of Earth (23.44°)
-    this.earthGroup.rotation.z = THREE.MathUtils.degToRad(-15.0);
-    this.earthGroup.rotation.x = THREE.MathUtils.degToRad(18.0);
+    // Positioned so the curved horizon spans wide across the webpage
+    // Lowered slightly and tilted to show vibrant temperate/equatorial oceans & continents
+    this.earthGroup.position.set(0.0, -4.15, 0.1);
+    this.earthGroup.rotation.z = THREE.MathUtils.degToRad(-12.0);
+    this.earthGroup.rotation.x = THREE.MathUtils.degToRad(-6.0);
     this.scene.add(this.earthGroup);
 
-    // High-contrast Earth sphere: deep royal navy oceans, vibrant terrain relief
+    // High-contrast Earth sphere: deep navy oceans, vivid terrain relief
     const earthRadius = 4.6;
     const earthGeo = new THREE.SphereGeometry(earthRadius, 128, 128);
     const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      roughness: 0.72,
-      metalness: 0.0,
+      roughness: 0.65,
+      metalness: 0.02,
     });
     this.earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    // Initial rotation to showcase the vibrant Atlantic Ocean, Europe, Africa & Americas
+    this.earthMesh.rotation.y = 1.2;
     this.earthGroup.add(this.earthMesh);
-
-    // Glowing Atmospheric Limb Ring (AdditiveBlending to prevent dark borders)
-    const atmosGeo = new THREE.SphereGeometry(earthRadius + 0.035, 96, 96);
-    const atmosMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.12,
-      blending: THREE.AdditiveBlending,
-    });
-    this.atmosphereLimb = new THREE.Mesh(atmosGeo, atmosMat);
-    this.earthGroup.add(this.atmosphereLimb);
 
     // ==========================================
     // 3. SPHERICAL MOON IN THE SKY (orbiting around Earth)
     // ==========================================
-    const moonRadius = 0.65;
+    const moonRadius = 0.52;
     const moonGeo = new THREE.SphereGeometry(moonRadius, 96, 96);
     const moonMat = new THREE.MeshStandardMaterial({
       map: moonTex,
@@ -114,14 +108,14 @@ export class NASAThreeGlobeScene {
 
   private updateMoonPosition(): void {
     // Orbital path: sweeps through the sky in the upper-right quadrant
-    const radiusX = 2.4;
-    const radiusY = 0.45;
-    const centerX = 0.4;
-    const centerY = 1.35;
+    const radiusX = 2.2;
+    const radiusY = 0.40;
+    const centerX = 0.6;
+    const centerY = 1.45;
 
     const x = centerX + Math.cos(this.moonOrbitAngle) * radiusX;
     const y = centerY + Math.sin(this.moonOrbitAngle) * radiusY;
-    const z = Math.sin(this.moonOrbitAngle) * 0.8 - 0.2;
+    const z = Math.sin(this.moonOrbitAngle) * 0.7 - 0.2;
 
     this.moonMesh.position.set(x, y, z);
     this.moonMesh.rotation.y = this.moonOrbitAngle + Math.PI;
@@ -132,6 +126,8 @@ export class NASAThreeGlobeScene {
       return this.textureCache.get(url)!;
     }
     const tex = this.textureLoader.load(url);
+    // CRITICAL: Set sRGB color space so Three.js renders textures with correct gamma and rich contrast
+    tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.generateMipmaps = true;
@@ -173,8 +169,8 @@ export class NASAThreeGlobeScene {
       this.updateMoonPosition();
 
       this.earthGroup.rotation.x = Math.max(
-        THREE.MathUtils.degToRad(8),
-        Math.min(THREE.MathUtils.degToRad(28), this.earthGroup.rotation.x + dy * 0.003)
+        THREE.MathUtils.degToRad(-16),
+        Math.min(THREE.MathUtils.degToRad(12), this.earthGroup.rotation.x + dy * 0.003)
       );
 
       this.lastPointer = { x: clientX, y: clientY };
@@ -223,7 +219,6 @@ export class NASAThreeGlobeScene {
       cancelAnimationFrame(this.animFrameId);
     }
     this.earthMesh.geometry.dispose();
-    this.atmosphereLimb.geometry.dispose();
     this.moonMesh.geometry.dispose();
     this.textureCache.forEach((tex) => tex.dispose());
     this.textureCache.clear();
