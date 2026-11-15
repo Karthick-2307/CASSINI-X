@@ -1,23 +1,27 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { GlobePlanet } from "./NASAThreeGlobeRenderer";
+import { GlobeViewMode } from "./NASAThreeGlobeRenderer";
 import { RotatingPlanetGlobe } from "./RotatingPlanetGlobe";
 
 interface HeroSectionProps {
   onScrollToHowItWorks: () => void;
 }
 
+const VIEW_OPTIONS: { id: GlobeViewMode; label: string }[] = [
+  { id: "earthrise", label: "Earth from Moon" },
+  { id: "mars", label: "Mars" },
+  { id: "earth", label: "Earth" },
+  { id: "moon", label: "Moon" },
+];
+
 export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHowItWorks }) => {
-  const [activePlanet, setActivePlanet] = useState<GlobePlanet>("mars");
+  const [viewMode, setViewMode] = useState<GlobeViewMode>("earthrise");
 
   return (
-    <section className="relative w-full bg-black text-white min-h-[82vh] lg:min-h-[88vh] flex items-center overflow-hidden border-b border-white/10">
-      {/* Background Star Ambient Glow (Ultra subtle) */}
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black pointer-events-none" />
-
-      <div className="w-full max-w-[1400px] mx-auto px-6 sm:px-10 lg:px-14 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+    <section className="relative w-full bg-black text-white min-h-[84vh] lg:min-h-[90vh] flex items-center overflow-hidden border-b border-white/10">
+      <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-14 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
         {/* Left Column: Bold SpaceX-style Typography & Exploration Action */}
-        <div className="lg:col-span-6 z-10 flex flex-col justify-center space-y-6 text-left">
+        <div className="lg:col-span-5 z-10 flex flex-col justify-center space-y-6 text-left">
           <div className="space-y-1">
             <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#94A3B8] block">
               CASSIN X • ASTRA-X PLATFORM
@@ -30,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHowItWorks }
           </div>
 
           <p className="text-sm sm:text-base text-gray-300 font-sans max-w-lg leading-relaxed font-normal">
-            Upload orbital observations of Mars or the Moon to identify matching terrestrial terrains. ASTRA-X extracts measurable topography, slopes, and surface roughness across open planetary datasets.
+            From lunar impact basins to Martian volcanic plains, discover where on Earth matches other worlds. ASTRA-X extracts measurable topography, slopes, and surface roughness across open planetary datasets.
           </p>
 
           {/* Minimalist SpaceX-Style Outline Action Buttons */}
@@ -51,32 +55,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToHowItWorks }
             </button>
           </div>
 
-          {/* Celestial Body Switcher (Mars / Earth / Moon) */}
-          <div className="pt-4 flex items-center space-x-4 text-xs font-mono">
-            <span className="text-gray-500 uppercase tracking-widest text-[11px]">BODY:</span>
-            {(["mars", "earth", "moon"] as GlobePlanet[]).map((p) => {
-              const isSelected = activePlanet === p;
+          {/* Perspective View Switcher (Earth from Moon / Mars / Earth / Moon) */}
+          <div className="pt-4 flex items-center space-x-3 text-xs font-mono">
+            <span className="text-gray-500 uppercase tracking-widest text-[11px]">VIEW:</span>
+            {VIEW_OPTIONS.map((opt) => {
+              const isSelected = viewMode === opt.id;
               return (
                 <button
-                  key={p}
+                  key={opt.id}
                   type="button"
-                  onClick={() => setActivePlanet(p)}
+                  onClick={() => setViewMode(opt.id)}
                   className={`uppercase tracking-widest text-xs transition-colors py-1 ${
                     isSelected
                       ? "text-white font-bold border-b border-white"
                       : "text-gray-500 hover:text-gray-300"
                   }`}
                 >
-                  {p}
+                  {opt.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Right Column: Massive Cinematic Rotating Planet */}
-        <div className="lg:col-span-6 flex justify-center lg:justify-end items-center relative overflow-visible">
-          <RotatingPlanetGlobe activePlanet={activePlanet} />
+        {/* Right Column: Apollo 8 Earthrise 3D Scene (Moon Horizon with Rotating Earth) */}
+        <div className="lg:col-span-7 flex justify-center lg:justify-end items-center relative overflow-visible">
+          <RotatingPlanetGlobe viewMode={viewMode} />
         </div>
       </div>
     </section>

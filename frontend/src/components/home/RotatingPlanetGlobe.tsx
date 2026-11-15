@@ -1,16 +1,16 @@
 import React, { useRef, useEffect } from "react";
 import {
-  GlobePlanet,
+  GlobeViewMode,
   NASAThreeGlobeScene,
 } from "./NASAThreeGlobeRenderer";
 
 export interface RotatingPlanetGlobeProps {
-  activePlanet?: GlobePlanet;
+  viewMode?: GlobeViewMode;
   className?: string;
 }
 
 export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
-  activePlanet = "mars",
+  viewMode = "earthrise",
   className = "",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -20,9 +20,10 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // High resolution canvas buffer for smooth spherical rendering
-    const size = 600;
-    const scene = new NASAThreeGlobeScene(canvas, size, size);
+    // Cinematic widescreen Earthrise resolution
+    const width = 800;
+    const height = 620;
+    const scene = new NASAThreeGlobeScene(canvas, width, height);
     sceneRef.current = scene;
 
     // Check prefers-reduced-motion
@@ -31,7 +32,7 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
       scene.setRotation(false);
     } else {
       scene.setRotation(true);
-      scene.setSpeed(0.7); // Majestic slow rotation
+      scene.setSpeed(0.8); // Smooth realistic rotation
     }
 
     const handleMotionChange = (e: MediaQueryListEvent) => {
@@ -48,20 +49,20 @@ export const RotatingPlanetGlobe: React.FC<RotatingPlanetGlobeProps> = ({
 
   useEffect(() => {
     if (sceneRef.current) {
-      sceneRef.current.setPlanet(activePlanet);
+      sceneRef.current.setMode(viewMode);
     }
-  }, [activePlanet]);
+  }, [viewMode]);
 
   return (
     <div
-      className={`relative w-full flex items-center justify-center select-none ${className}`}
+      className={`relative w-full flex items-center justify-center select-none overflow-visible ${className}`}
     >
       <canvas
         ref={canvasRef}
-        width={600}
-        height={600}
-        className="w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] md:w-[500px] md:h-[500px] lg:w-[580px] lg:h-[580px] touch-none cursor-grab active:cursor-grabbing bg-transparent"
-        aria-label={`Interactive 3D representation of ${activePlanet}`}
+        width={800}
+        height={620}
+        className="w-full max-w-[480px] sm:max-w-[620px] lg:max-w-[780px] h-auto aspect-[800/620] touch-none cursor-grab active:cursor-grabbing bg-transparent"
+        aria-label="Interactive 3D representation of Earthrise from the Moon"
       />
     </div>
   );
